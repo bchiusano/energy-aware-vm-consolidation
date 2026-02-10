@@ -1,0 +1,7 @@
+timestamp,vm_id,hypervisor_name,hypervisor_group,scaphandre_vm_power_total_watts
+2025-03-28T11:03:00Z,eacecc23,391ea34d,a6177608,0.23
+2025-03-28T11:06:00Z,eacecc23,391ea34d,a6177608,0.06
+2025-03-28T11:09:00Z,eacecc23,391ea34d,a6177608,0.01
+2025-03-28T11:12:00Z,eacecc23,391ea34d,a6177608,0.01
+2025-03-28T11:15:00Z,eacecc23,391ea34d,a6177608,0.01
+2025-03-28T11:18:00Z,eacecc23,391ea34d,a6177608,0.01
