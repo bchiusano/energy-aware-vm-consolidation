@@ -1,0 +1,7 @@
+node_group,form_factor,total_cores,total_threads,cpu_freq_ghz,#gpus,#disks,#ethernet_nics,#infiniband_nics,disk_size_gb,memory_size_gb,memory_used_slots,rated_power_total,rated_power_usable
+11cdff15,Blade Server,24,48,2.7,0,1,2,0,400.0,16.0,1,3200.0,1600.0
+b8994569,Chassis Server,48,96,2.1,0,1,2,0,480.0,192.0,6,2000.0,2000.0
+a97fe24e,Rack Server,40,80,2.1,0,2,2,0,223.5,768.0,12,750.0,750.0
+5f67cb23,Rack Server,40,80,2.1,2,2,2,1,1966.08,192.0,12,1600.0,1600.0
+f6fec747,Chassis Server,48,96,2.2,0,4,2,0,446.63,192.0,6,2400.0,2400.0
+a6177608,Rack Server,64,128,2.6,0,2,2,1,960.0,384.0,12,1100.0,1100.0
