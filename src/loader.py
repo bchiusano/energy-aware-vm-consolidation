@@ -1,6 +1,7 @@
 from pathlib import Path
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+import numpy as np
 
 BASE = Path.cwd()
 
