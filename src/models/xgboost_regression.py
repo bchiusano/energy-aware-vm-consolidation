@@ -1,12 +1,13 @@
 import xgboost as xgb
 import shap
-from loader import X_train, X_val, X_test, y_train, y_test, y_val, ALL_TABULAR_FEATURES
+from ..config import *
 import itertools
 from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from xgboost.callback import EarlyStopping
 import shap
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # https://mljar.com/blog/visualize-xgboost-tree/
 
@@ -68,13 +69,33 @@ def evaluate(model, X, y, dataset_name="Dataset"):
     print(f"{dataset_name} RMSE={rmse:.2f} W MAE={mae:.2f} W")
     return y_pred
 
+# load data
+clean_df = pd.read_parquet(DATAPATH)
+
+train = clean_df[clean_df['timestamp'] <= TRAIN_END_DATE]
+val = clean_df[(clean_df['timestamp'] > TRAIN_END_DATE) & (clean_df['timestamp'] <= VAL_END_DATE)]
+test = clean_df[clean_df['timestamp'] > VAL_END_DATE]
+
+train_clean = train.dropna(subset=ALL_TABULAR_FEATURES + [TARGET])
+val_clean = val.dropna(subset=ALL_TABULAR_FEATURES + [TARGET])
+test_clean = test.dropna(subset=ALL_TABULAR_FEATURES + [TARGET])
+
+
+X_train = train_clean[ALL_TABULAR_FEATURES]
+y_train = train_clean[TARGET]
+
+X_val = val_clean[ALL_TABULAR_FEATURES]
+y_val = val_clean[TARGET]
+
+X_test = test_clean[ALL_TABULAR_FEATURES]
+y_test = test_clean[TARGET]
 
 # for hyperparameter search
 #best_model = compute_search()
 
 #Best params: {'max_depth': 6, 'learning_rate': 0.1, 'subsample': 1.0, 'colsample_bytree': 0.8}
 #Best val RMSE: 7.013
-# After tuning
+# After tuning - training final model
 model = xgb.XGBRegressor(
         max_depth = 6,
         learning_rate = 0.1,
@@ -96,9 +117,22 @@ model.fit(
 # Evaluation
 print(f"best iteration: {model.best_iteration}")
 _ = evaluate(model, X_val, y_val, "XGBoost (validation)")
-_ = evaluate(model, X_test, y_test, "XGBoost (test)")
+xgboost_test_preds = evaluate(model, X_test, y_test, "XGBoost (test)")
+
+# display predictions vs true values
+plt.figure(figsize=(8, 6))
+plt.plot(xgboost_test_preds, label='Test predictions')
+plt.plot(y_test.values, label='True values')
+plt.xlabel('Data Point')
+plt.ylabel('Target Value')
+plt.title('XGBoost Predictions vs True Values')
+plt.legend()
+plt.tight_layout()
+plt.savefig('xgboost_predictions.png', dpi=150, bbox_inches='tight')
+plt.close()
 
 # SHAP
+'''
 X_test_sample = X_test.sample(n=10_000, replace=False, random_state=42)
 
 explainer = shap.TreeExplainer(model)
@@ -127,7 +161,7 @@ shap.plots.violin(
 plt.tight_layout()
 plt.savefig('shap_violin.png', bbox_inches='tight', dpi=150)
 plt.close()
-
+'''
 #best iteration: 1185
 #XGBoost (validation) RMSE=7.00 W MAE=2.70 W
 #XGBoost (test) RMSE=6.58 W MAE=2.86 W
