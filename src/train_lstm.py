@@ -120,7 +120,7 @@ plt.ylabel('MSE Loss')
 plt.title('LSTM Training Curve')
 plt.legend()
 plt.tight_layout()
-plt.savefig('lstm_loss_curve.png', dpi=150, bbox_inches='tight')
+plt.savefig('lstm_loss_curve_trail2.png', dpi=150, bbox_inches='tight')
 plt.close()
 
 print("Evaluating on test set...")

@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 class LSTMNetwork(nn.Module):
-    def __init__(self, n_features, hidden=64, n_layers=1, dropout=0.2):
+    def __init__(self, n_features, hidden=64, n_layers=2, dropout=0.3):
         super().__init__()
         self.lstm = nn.LSTM(
             input_size=n_features,
