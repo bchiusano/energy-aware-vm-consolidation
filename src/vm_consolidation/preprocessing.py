@@ -5,6 +5,9 @@ ROOT = Path(__file__).resolve().parents[2]
 SQL_DIR = ROOT / "src/sql"
 DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
 
+UPPER_THRESHOLD = 90
+LOWER_THRESHOLD = 10
+
 # DUCKDB IN-MEMORY DATABASE
 # TODO: check if con is being passed properly 
 con = ddb.connect(':memory:')
@@ -39,6 +42,7 @@ if not Path(f'{DATA_DIR}/processed/vm_final.parquet').exists():
 else:
     # import vm_final.parquet into duckdb
     #con.execute(f"""CREATE TABLE vm_final AS SELECT * FROM read_parquet('{DATA_DIR}/processed/vm_final.parquet')""")
+    print("VM FINAL exists, creating view")
     con.execute(f"""CREATE OR REPLACE VIEW vm_final AS SELECT * FROM read_parquet('{DATA_DIR}/processed/vm_final.parquet')""")
 
 if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
@@ -49,7 +53,8 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
     con.execute(f"""CREATE TABLE nodes_table AS SELECT * FROM read_parquet('{NODES_FEATURES}')""")
 
     # compute node_snapshot
-    con.execute(open(SQL_DIR / "03_build_node_snapshot.sql").read())
+    # Also calculates over/under utilised nodes
+    con.execute(open(SQL_DIR / "03_build_node_snapshot.sql").read(), [UPPER_THRESHOLD, LOWER_THRESHOLD])
 
     # persist
 
@@ -65,4 +70,5 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
 else: 
     # import node_snapshot.parquet into duckdb
     #con.execute(f"""CREATE TABLE node_snapshot AS SELECT * FROM read_parquet('{DATA_DIR}/processed/node_snapshot.parquet')""")
+    print("NODE SNAPSHOT exists, creating view")
     con.execute(f"""CREATE OR REPLACE VIEW node_snapshot AS SELECT * FROM read_parquet('{DATA_DIR}/processed/node_snapshot.parquet')""")

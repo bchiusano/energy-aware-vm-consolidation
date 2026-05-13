@@ -1,6 +1,8 @@
 from pathlib import Path
-from vm_selection import LOWER_THRESHOLD, minimization_of_migrations
 import pandas as pd
+from vm_selection import select_underloaded_vms, minimization_of_migrations
+from vm_placement import best_fit_placement
+
 
 # helper functions for vm consolidation
 # show before consolidation
@@ -28,111 +30,86 @@ def show_after_consolidation(vm_list):
     # some sort of visualisation
     pass
 
+def sortDecreasingUtilization(vmList, total_vm_power, node_cpu_util):
 
-def sortDecreasingUtilization(vmList, total_vm_power):
+    print("in sort decreasing")
+    if total_vm_power <= 0:
+        vmList["vm_load"] = 0
 
-    # Input: List of vm_ids and corresponding power usage, and total vm power for the node
-    # Output: List of vm_ids sorted by decreasing load (as a percentage of total vm power)
-    vmList['vm_load'] = vmList['vm_power'] / total_vm_power * 100
-    sorted_vm_df = vmList.sort_values(by='vm_load', ascending=False)
-    return sorted_vm_df['vm_id'].to_list(), sorted_vm_df['vm_power'].to_list(), sorted_vm_df['vm_load'].to_l
+    else:
+        # How much cpu utilization each vm contributes 
+        vmList["vm_load"] = (vmList["vm_power"]/ total_vm_power) * node_cpu_util
 
+    sorted_vm_df = vmList.sort_values(
+        by="vm_load",
+        ascending=False
+    )
+
+    return (
+        sorted_vm_df["vm_id"].to_list(),
+        sorted_vm_df["vm_power"].to_list(),
+        sorted_vm_df["vm_load"].to_list()
+    )
+
+def enrich_vm_loads(df):
+
+    print("in enrich vm loads")
+    df = df.copy()
+
+    df["vm_loads"] = None
+
+    for idx, row in df.iterrows():
+
+        vm_ids, vm_powers, vm_loads = (
+            sortDecreasingUtilization(
+                pd.DataFrame({
+                    "vm_id": row["vm_ids"],
+                    "vm_power": row["vm_powers"]
+                }),
+                row["total_vm_power"],
+                row["cpu_usage_percent"]
+            )
+        )
+
+        df.at[idx, "vm_ids"] = vm_ids
+        df.at[idx, "vm_powers"] = vm_powers
+        df.at[idx, "vm_loads"] = vm_loads
+
+    return df
 
 
 class VMConsolidation:
-    def __init__(self, con, nodes, vms):
+    def __init__(self, con):
         self.con = con
-        self.nodes = nodes
-        self.vms = vms
 
     
-    def host_detection(self, t, upper, lower):
-        host_state = self.con.execute(open(SQL_DIR / "04_host_detection.sql").read(),
-                                      [upper, lower, t]).df()
+    def host_detection(self, host_state):
         
+        print("in host detection")
         overloaded = host_state[host_state["host_state"] == "overloaded"]
+        overloaded = enrich_vm_loads(overloaded)
         underloaded = host_state[host_state["host_state"] == "underloaded"]
+        underloaded = enrich_vm_loads(underloaded)
+        targets = host_state[host_state["host_state"] == "normal"]
 
-        overloaded['vm_loads'] = None
-        underloaded['vm_loads'] = None
-
-        for idx, row in overloaded.iterrows():
-            # replace the original vm_ids and vm_powers with the sorted ones (and calculate vm load)
-            vm_ids, vm_powers, vm_loads = sortDecreasingUtilization(
-                pd.DataFrame({
-                    'vm_id': row['vm_ids'],
-                    'vm_power': row['vm_powers']
-                }),
-                row['total_vm_power']
-            )
-
-            overloaded.at[idx, 'vm_ids'] = vm_ids
-            overloaded.at[idx, 'vm_powers'] = vm_powers
-            overloaded.at[idx, 'vm_loads'] = vm_loads
-
-        for idx, row in underloaded.iterrows():
-            # replace the original vm_ids and vm_powers with the sorted ones (and calculate vm load)
-            vm_ids, vm_powers, vm_loads = sortDecreasingUtilization(
-                pd.DataFrame({
-                    'vm_id': row['vm_ids'],
-                    'vm_power': row['vm_powers']
-                }),
-                row['total_vm_power']
-            )
-
-            underloaded.at[idx, 'vm_ids'] = vm_ids
-            underloaded.at[idx, 'vm_powers'] = vm_powers
-            underloaded.at[idx, 'vm_loads'] = vm_loads
-
-        print("OVERLOADED: ")
-        print(overloaded)
-
-        print("UNDERLOADED: ")
-        print(underloaded)
-
-        return overloaded, underloaded
+        return overloaded, underloaded, targets
 
         
     def vm_selection(self, underloaded, overloaded):
-        vms_to_migrate = []
+        
+        print("in vm selection")
+        underloaded_vms = select_underloaded_vms(underloaded=underloaded)
+        overloaded_vms = minimization_of_migrations(overloaded=overloaded, UPPER_THRESHOLD=UPPER_THRESHOLD)
 
-        # Underloaded nodes
-        for _, row in underloaded.iterrows():
-            if row["vm_count"] == 0:
-                # TODO: should I put these nodes to sleep?
-                continue
-            
-            for vm_id in row["vm_ids"]:
-                vms_to_migrate.append({
-                "vm_id": vm_id,
-                "source_node": row["node_name"]
-                })
-
-        # Overloaded nodes
-        for _, row in overloaded.iterrows():
-            if row["vm_count"] == 0:
-                continue
-            
-            vm_ids = row['vm_ids']
-            vm_loads = row['vm_loads']
-            host_util = row["cpu_usage_percent"]
-            # Minimization of migrations policy
-
-            if len(vm_ids) > 1:
-                vms_to_migrate = minimization_of_migrations(vm_ids, vm_loads, host_util, vms_to_migrate, row)
-            else:
-                vms_to_migrate.append({
-                    "vm_id": vm_ids[0],
-                    "source_node": row["node_name"]
-                })
-
-        print("VMS to migrate")
-        print(vms_to_migrate)
-        return vms_to_migrate
+        return underloaded_vms + overloaded_vms
 
     
-    def vm_placement(self):
-        print("VM Placement starts here - TODO")
+    def vm_placement(self, migration_list, hosts):
+        print("VM Placement starts here:")
+        placements = best_fit_placement(vms_to_migrate=migration_list, hosts=hosts, UPPER_THRESHOLD=UPPER_THRESHOLD)
+        print("PLACEMENTS: ")
+        print(placements)
+
 
 
 if __name__ == "__main__":
@@ -140,11 +117,13 @@ if __name__ == "__main__":
     from preprocessing import con
 
     # load nodes and vms data from duckdb
-    nodes = con.execute("SELECT * FROM node_snapshot").fetchdf()
-    vms = con.execute("SELECT * FROM vm_final").fetchdf()
+    # TODO: not sure if this is needed 
+    #nodes = con.execute("SELECT * FROM node_snapshot").fetchdf()
+    #vms = con.execute("SELECT * FROM vm_final").fetchdf()
 
-    vm_consolidation = VMConsolidation(con, nodes, vms)
+    vm_consolidation = VMConsolidation(con)
     
+    # TODO: rethink this as to not iterate through timestamps uneccessarily 
     '''
     timestamps = con.execute("""
         SELECT DISTINCT timestamp AT TIME ZONE 'UTC'
@@ -154,20 +133,35 @@ if __name__ == "__main__":
     
     for (t,) in timestamps:
     '''
+
     t = TIMESTAMP
     t = t + " UTC"
-    # show before consolidation
-    #show_before_consolidation(vms)
+    print("TIMESTAMP: " , t)
+        # show before consolidation
+        #show_before_consolidation(vms)
 
-    # host detection
-    # TODO: maybe should calculate over/underloaded nodes and then iterate only through those timestamps?
-    underutilized, overutilised = vm_consolidation.host_detection(t=t, upper=UPPER_THRESHOLD, lower=LOWER_THRESHOLD)
+    # host detection - where placement_targets are the "normal" nodes in the host state
+    host_df = con.execute(f"SELECT * FROM node_snapshot WHERE timestamp = '{t}'").df()
+    overutilised, underutilized, placement_targets = vm_consolidation.host_detection(host_state=host_df)
+
+    print("UNDERUTILISED")
+    print(underutilized.head(10))
+
+    print("OVERUTILISED")
+    print(overutilised.head(10))
+
+    print("Targets:")
+    print(placement_targets.head(10))
 
     # vm selection
     vms_to_migrate = vm_consolidation.vm_selection(underloaded=underutilized, overloaded=overutilised)
 
+    
     # vm placement
-    vm_consolidation.vm_placement()
+    vm_consolidation.vm_placement(vms_to_migrate, placement_targets)
 
-    # show after consolidation
-    #show_after_consolidation(vms)
+    # TODO: when to update the source nodes (put them to sleep or new power)
+    # TODO: might have to calculate the power and energy with the formula and then compare it to my measurements
+
+        # show after consolidation
+        #show_after_consolidation(vms)
