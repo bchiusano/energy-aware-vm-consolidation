@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 from vm_selection import select_underloaded_vms, minimization_of_migrations
-from vm_placement import best_fit_placement
+from vm_placement_debug import best_fit_placement
 
 
 # helper functions for vm consolidation
@@ -93,6 +93,27 @@ if __name__ == "__main__":
 
     # host detection - where placement_targets are the "normal" nodes in the host state
     host_df = con.execute(f"SELECT * FROM node_snapshot WHERE timestamp = '{t}'").df()
+
+    # Fetch VMs for that timestamp and group by host
+    vm_df = con.execute(f"""
+        SELECT 
+            hypervisor_name,
+            vm_id, vm_cpu, vm_memory_mb, vm_power
+        FROM vm_final
+        WHERE timestamp = '{t}'
+        ORDER BY hypervisor_name, vm_power DESC
+    """).df()
+
+    vms_by_host = {}
+    for host, group in vm_df.groupby('hypervisor_name'):
+        vms_by_host[host] = group[['vm_id', 'vm_cpu', 'vm_memory_mb', 'vm_power']].to_dict('records')
+
+    # Now populate the host_df with this data
+    host_df['vm_ids'] = host_df['node_name'].map(lambda x: [v['vm_id'] for v in vms_by_host.get(x, [])])
+    host_df['vm_cpus'] = host_df['node_name'].map(lambda x: [v['vm_cpu'] for v in vms_by_host.get(x, [])])
+    host_df['vm_memories_mb'] = host_df['node_name'].map(lambda x: [v['vm_memory_mb'] for v in vms_by_host.get(x, [])])
+    host_df['vm_powers'] = host_df['node_name'].map(lambda x: [v['vm_power'] for v in vms_by_host.get(x, [])])
+
     overutilised, underutilized, placement_targets = vm_consolidation.host_detection(host_state=host_df)
 
     print("UNDERUTILISED")

@@ -23,10 +23,10 @@ SELECT
     -- VM info
     COUNT(v.vm_id) AS vm_count,
 
-    LIST(v.vm_id ORDER BY v.vm_power DESC) AS vm_ids,
-    LIST(v.vm_cpu ORDER BY v.vm_power DESC) AS vm_cpus,
-    LIST(v.vm_memory_mb ORDER BY v.vm_power DESC) AS vm_memories_mb,
-    LIST(v.vm_power ORDER BY v.vm_power DESC) AS vm_powers,
+    --LIST(v.vm_id ORDER BY v.vm_power DESC) AS vm_ids,
+    --LIST(v.vm_cpu ORDER BY v.vm_power DESC) AS vm_cpus,
+    --LIST(v.vm_memory_mb ORDER BY v.vm_power DESC) AS vm_memories_mb,
+    --LIST(v.vm_power ORDER BY v.vm_power DESC) AS vm_powers,
 
     -- Dynamic allocated resources
     COALESCE(SUM(v.vm_power), 0)
@@ -60,5 +60,5 @@ GROUP BY
     n.cpu_usage_percent,
     n.ipmi_system_power_watts,
     n.total_threads,
-    n.rated_power,
+    n.rated_power_usable,
     n.memory_size_gb;

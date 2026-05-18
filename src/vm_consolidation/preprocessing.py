@@ -9,7 +9,6 @@ UPPER_THRESHOLD = 90
 LOWER_THRESHOLD = 10
 
 # DUCKDB IN-MEMORY DATABASE
-# TODO: check if con is being passed properly 
 con = ddb.connect(':memory:')
 
 if not Path(f'{DATA_DIR}/processed/vm_final.parquet').exists():

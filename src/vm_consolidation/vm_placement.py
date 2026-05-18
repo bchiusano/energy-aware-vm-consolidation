@@ -12,6 +12,11 @@ def best_fit_placement(vms_to_migrate, hosts):
         vm_cpu = vm["vm_cpu"]  # vCPUs to allocate
         vm_power = vm["vm_power"] # Power to allocate
 
+        # DEBUGGGGGG    
+        print(f"\n{'='*80}")
+        print(f"Placing VM {vm['vm_id']} (CPU: {vm_cpu}, Mem: {vm_memory}MB, Power: {vm_power}W)")
+        print(f"  Source: {vm['source_node']}")
+
         best_host = None
         best_remaining = float("inf")
 

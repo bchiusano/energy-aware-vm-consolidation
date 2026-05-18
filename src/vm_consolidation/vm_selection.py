@@ -6,6 +6,7 @@ def select_underloaded_vms(underloaded):
         if row["vm_count"] == 0:
             continue
 
+        print("ROW: VMS", row["vm_ids"])
         # this should already be lists
         vm_ids = list(row["vm_ids"])
         vm_cpus = list(row["vm_cpus"])
