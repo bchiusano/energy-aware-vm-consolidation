@@ -49,9 +49,9 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
 
     print("Preprocessing Node Snapshot data...")
 
-    NODES_FEATURES = DATA_DIR / "full_nodes_featurestwo.parquet"
+    NODES_FEATURES = DATA_DIR / "nodes_operational_features.parquet"
     con.execute(f"""CREATE TABLE nodes_table AS SELECT * FROM read_parquet('{NODES_FEATURES}')""")
-
+    
     # compute node_snapshot
     # Also calculates over/under utilised nodes
     con.execute(open(SQL_DIR / "03_build_node_snapshot.sql").read(), [UPPER_THRESHOLD, LOWER_THRESHOLD])

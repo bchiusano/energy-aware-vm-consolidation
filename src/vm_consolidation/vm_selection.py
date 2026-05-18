@@ -6,15 +6,19 @@ def select_underloaded_vms(underloaded):
         if row["vm_count"] == 0:
             continue
 
+        # this should already be lists
         vm_ids = list(row["vm_ids"])
-        vm_loads = list(row["vm_loads"])
+        vm_cpus = list(row["vm_cpus"])
+        vm_memories_mb = list(row["vm_memories_mb"])
+        vm_powers = list(row["vm_powers"])
         
-        # TODO: check if vms and loads are corresponding to the same ids
         for i, vm_id in enumerate(vm_ids):
             vms_to_migrate.append({
             "vm_id": vm_id,
-            "vm_load": vm_loads[i],
-            "source_node": row["node_name"]
+            "source_node": row["node_name"],
+            "vm_cpu": vm_cpus[i],
+            "vm_memory_mb": vm_memories_mb[i],
+            "vm_power": vm_powers[i]
             })
     
     print("VMS TO MIGRATE (UNDERLOADED): ", vms_to_migrate)
@@ -25,58 +29,73 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
 
     vms_to_migrate = []
 
-    print("UPPER_THRESH: ", UPPER_THRESHOLD)
-
     for _, row in overloaded.iterrows():
 
         if row["vm_count"] == 0:
             continue
-        
-        vm_ids = list(row["vm_ids"])
-        print("VM_IDs: ", vm_ids)
-        vm_loads = list(row["vm_loads"])
-        print("VM_LOADs: ", vm_loads)
 
+        vm_ids = list(row["vm_ids"])
+        vm_cpus = list(row["vm_cpus"])
+        vm_memories_mb = list(row["vm_memories_mb"])
+        vm_powers = list(row["vm_powers"])
+        
         cpu_util = row["cpu_usage_percent"]
-        print("CPU UTIL START: ", cpu_util)
+
+        total_vm_power = sum(vm_powers)
+
+        # Estimate VM CPU shares proportionally
+        vm_cpu_shares = []
+
+        for power in vm_powers:
+
+            if total_vm_power > 0:
+                estimated_share = (
+                    cpu_util * power / total_vm_power
+                )
+            else:
+                estimated_share = 0
+
+            vm_cpu_shares.append(estimated_share)
 
         while cpu_util > UPPER_THRESHOLD and vm_ids:
 
             overload = cpu_util - UPPER_THRESHOLD
 
             best_idx = None
-            best_load = None
+            best_share = None
 
-            # smallest VM that fixes overload
-            for i, load in enumerate(vm_loads):
+            # Smallest VM that resolves overload
+            for i, share in enumerate(vm_cpu_shares):
 
-                if load >= overload:
-                    print("load >= overload: ", load, " >= ", overload)
-                    if best_load is None or load < best_load:
-                        best_load = load
-                        print("Best load: ", best_load)
+                if share >= overload:
+
+                    if best_share is None or share < best_share:
+                        best_share = share
                         best_idx = i
 
-            # if none can fix overload alone,
-            # migrate largest VM
+            # Otherwise remove largest estimated share
             if best_idx is None:
-                best_idx = vm_loads.index(max(vm_loads))
-                print("BEST IDX IS NONE")
-                best_load = vm_loads[best_idx]
-                print("BEST LOAD; ", best_load)
-
-            vm_id = vm_ids[best_idx]
+                best_idx = vm_cpu_shares.index(
+                    max(vm_cpu_shares)
+                )
+                best_share = vm_cpu_shares[best_idx]
 
             vms_to_migrate.append({
-                "vm_id": vm_id,
-                "vm_load": best_load,
-                "source_node": row["node_name"]
+                "vm_id": vm_ids[best_idx],
+                "source_node": row["node_name"],
+                "vm_cpu": vm_cpus[best_idx],
+                "vm_memory_mb": vm_memories_mb[best_idx],
+                "vm_power": vm_powers[best_idx]
             })
 
-            cpu_util -= best_load
+            # Reduce estimated CPU utilization
+            cpu_util -= best_share
 
+            # Remove migrated VM
             vm_ids.pop(best_idx)
-            vm_loads.pop(best_idx)
+            vm_powers.pop(best_idx)
+            vm_cpus.pop(best_idx)
+            vm_memories_mb.pop(best_idx)
+            vm_cpu_shares.pop(best_idx)
 
-    print("VMS to migrate (FROM MM): ", vms_to_migrate)
     return vms_to_migrate

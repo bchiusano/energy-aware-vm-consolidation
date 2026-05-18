@@ -8,10 +8,9 @@ def best_fit_placement(vms_to_migrate, hosts):
                      key=lambda x: x["vm_power"],
                      reverse=True):
 
-        # TODO: make sure that vm and node memory use the same units (normalise everything to mb)
-        vm_memory = vm["vm_memory"] # Memory_MB
+        vm_memory = vm["vm_memory_mb"] # Memory_MB to allocate
         vm_cpu = vm["vm_cpu"]  # vCPUs to allocate
-        vm_power = vm["vm_power"]
+        vm_power = vm["vm_power"] # Power to allocate
 
         best_host = None
         best_remaining = float("inf")
@@ -23,12 +22,14 @@ def best_fit_placement(vms_to_migrate, hosts):
             cpu_available = cpu_capacity - cpu_allocated # cpu is not based on allocated vCPUs instead of runtime utilization
             
             ######## Memory ########
-            memory_available = host["memory_free_bytes"] # free memory in bytes during that timestamp
+            memory_capacity = host["memory_capacity_mb"] # free memory in bytes during that timestamp
+            memory_allocated = host["memory_allocated_mb"] # sum of memory from VMs on this host
+            memory_available = memory_capacity - memory_allocated
 
             ######## Power ########
-            power_capacity = host["rated_power"]
+            power_capacity = host["power_capacity"]
             power_baseline = host["baseline_power"] # power_ipmi - power_allocated
-            power_allocated = host['vm_total_power']
+            power_allocated = host['vm_power_allocated'] # sum of power from VMs on this host
             power_available = power_capacity - power_baseline - power_allocated
 
             # Check all three constraints
@@ -54,17 +55,12 @@ def best_fit_placement(vms_to_migrate, hosts):
 
             # Update allocated resources 
             hosts.at[best_host, "cpu_allocated"] += vm["vm_cpu"]
-            hosts.at[best_host, "memory_free_bytes"] -= vm["vm_memory"]
-            hosts.at[best_host, "memory_allocated_bytes"] += vm["vm_memory"] # sum of memory from VMs on this host
-            hosts.at[best_host, "power_allocated"] += vm["vm_power"]
-            
-            # Updating power
-            hosts.at[best_host, "total_vm_power"] += vm["vm_power"]
+            hosts.at[best_host, "memory_allocated_mb"] += vm["vm_memory_mb"] # sum of memory from VMs on this host
+            hosts.at[best_host, "vm_power_allocated"] += vm["vm_power"]
 
-            # TODO: add simulated power
             hosts.at[best_host, "simulated_power"] = (
                 hosts.loc[best_host, "baseline_power"]
-                + hosts.loc[best_host, "total_vm_power"]
+                + hosts.loc[best_host, "vm_power_allocated"]
             )
 
         else:

@@ -30,53 +30,6 @@ def show_after_consolidation(vm_list):
     # some sort of visualisation
     pass
 
-def sortDecreasingUtilization(vmList, total_vm_power, node_cpu_util):
-
-    print("in sort decreasing")
-    if total_vm_power <= 0:
-        vmList["vm_load"] = 0
-
-    else:
-        # How much cpu utilization each vm contributes 
-        vmList["vm_load"] = (vmList["vm_power"]/ total_vm_power) * node_cpu_util
-
-    sorted_vm_df = vmList.sort_values(
-        by="vm_load",
-        ascending=False
-    )
-
-    return (
-        sorted_vm_df["vm_id"].to_list(),
-        sorted_vm_df["vm_power"].to_list(),
-        sorted_vm_df["vm_load"].to_list()
-    )
-
-def enrich_vm_loads(df):
-
-    print("in enrich vm loads")
-    df = df.copy()
-
-    df["vm_loads"] = None
-
-    for idx, row in df.iterrows():
-
-        vm_ids, vm_powers, vm_loads = (
-            sortDecreasingUtilization(
-                pd.DataFrame({
-                    "vm_id": row["vm_ids"],
-                    "vm_power": row["vm_powers"]
-                }),
-                row["total_vm_power"],
-                row["cpu_usage_percent"]
-            )
-        )
-
-        df.at[idx, "vm_ids"] = vm_ids
-        df.at[idx, "vm_powers"] = vm_powers
-        df.at[idx, "vm_loads"] = vm_loads
-
-    return df
-
 
 class VMConsolidation:
     def __init__(self, con):
@@ -86,10 +39,9 @@ class VMConsolidation:
     def host_detection(self, host_state):
         
         print("in host detection")
+        # these should already be sorted by decreasing vm power
         overloaded = host_state[host_state["host_state"] == "overloaded"]
-        overloaded = enrich_vm_loads(overloaded)
         underloaded = host_state[host_state["host_state"] == "underloaded"]
-        underloaded = enrich_vm_loads(underloaded)
         targets = host_state[host_state["host_state"] == "normal"]
 
         return overloaded, underloaded, targets
@@ -106,7 +58,7 @@ class VMConsolidation:
     
     def vm_placement(self, migration_list, hosts):
         print("VM Placement starts here:")
-        placements = best_fit_placement(vms_to_migrate=migration_list, hosts=hosts, UPPER_THRESHOLD=UPPER_THRESHOLD)
+        placements = best_fit_placement(vms_to_migrate=migration_list, hosts=hosts)
         print("PLACEMENTS: ")
         print(placements)
 
@@ -123,7 +75,6 @@ if __name__ == "__main__":
 
     vm_consolidation = VMConsolidation(con)
     
-    # TODO: rethink this as to not iterate through timestamps uneccessarily 
     '''
     timestamps = con.execute("""
         SELECT DISTINCT timestamp AT TIME ZONE 'UTC'
@@ -156,9 +107,8 @@ if __name__ == "__main__":
     # vm selection
     vms_to_migrate = vm_consolidation.vm_selection(underloaded=underutilized, overloaded=overutilised)
 
-    
     # vm placement
-    vm_consolidation.vm_placement(vms_to_migrate, placement_targets)
+    vm_consolidation.vm_placement(migration_list=vms_to_migrate, hosts=placement_targets)
 
     # TODO: when to update the source nodes (put them to sleep or new power)
     # TODO: might have to calculate the power and energy with the formula and then compare it to my measurements

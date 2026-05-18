@@ -9,8 +9,8 @@ SELECT
 
     h.user_id,
     h.project_id,
-    h.vcpus,
-    h.memory_MB,
+    h.vcpus AS vm_cpu,
+    h.memory_MB AS vm_memory_mb,
     h.root_GB,
     h.ephemeral_GB
 

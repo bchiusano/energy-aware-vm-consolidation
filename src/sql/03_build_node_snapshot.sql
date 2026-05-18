@@ -4,28 +4,49 @@ SELECT
     n.timestamp,
     n.node_name,
 
+    -- Telemetry
     n.cpu_usage_percent,
-
     n.ipmi_system_power_watts,
 
+    -- Capacities
+    n.total_threads AS cpu_capacity,
+    n.rated_power_usable AS power_capacity,
+    n.memory_size_gb * 1024 AS memory_capacity_mb,
+
+    -- Host state
     CASE
-        WHEN n.cpu_usage_percent > ?
-            THEN 'overloaded'
-
-        WHEN n.cpu_usage_percent < ?
-            THEN 'underloaded'
-
+        WHEN n.cpu_usage_percent > ? THEN 'overloaded'
+        WHEN n.cpu_usage_percent < ? THEN 'underloaded'
         ELSE 'normal'
     END AS host_state,
 
+    -- VM info
     COUNT(v.vm_id) AS vm_count,
 
-    LIST(v.vm_id) AS vm_ids,
+    LIST(v.vm_id ORDER BY v.vm_power DESC) AS vm_ids,
+    LIST(v.vm_cpu ORDER BY v.vm_power DESC) AS vm_cpus,
+    LIST(v.vm_memory_mb ORDER BY v.vm_power DESC) AS vm_memories_mb,
+    LIST(v.vm_power ORDER BY v.vm_power DESC) AS vm_powers,
 
-    LIST(v.power_clean) AS vm_powers,
+    -- Dynamic allocated resources
+    COALESCE(SUM(v.vm_power), 0)
+        AS vm_power_allocated,
 
-    COALESCE(SUM(v.power_clean), 0)
-        AS total_vm_power
+    COALESCE(SUM(v.vm_cpu), 0)
+        AS cpu_allocated,
+
+    COALESCE(SUM(v.vm_memory_mb), 0)
+        AS memory_allocated_mb,
+
+    -- Baseline node power
+    (
+        n.ipmi_system_power_watts
+        - COALESCE(SUM(v.vm_power), 0)
+    ) AS baseline_power,
+
+    -- Initial simulated power
+    n.ipmi_system_power_watts
+        AS simulated_power
 
 FROM nodes_table n
 
@@ -37,4 +58,7 @@ GROUP BY
     n.timestamp,
     n.node_name,
     n.cpu_usage_percent,
-    n.ipmi_system_power_watts;
+    n.ipmi_system_power_watts,
+    n.total_threads,
+    n.rated_power,
+    n.memory_size_gb;

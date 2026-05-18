@@ -12,5 +12,5 @@ FROM vm_merged;
 
 CREATE OR REPLACE TABLE vm_final AS
     SELECT *,
-        COALESCE(power_filled, 0) AS power_clean
+        COALESCE(power_filled, 0) AS vm_power
     FROM vm_filled;
