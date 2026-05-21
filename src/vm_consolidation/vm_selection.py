@@ -6,7 +6,7 @@ def select_underloaded_vms(underloaded):
         if row["vm_count"] == 0:
             continue
 
-        print("ROW: VMS", row["vm_ids"])
+        #print("ROW: VMS", row["vm_ids"])
         # this should already be lists
         vm_ids = list(row["vm_ids"])
         vm_cpus = list(row["vm_cpus"])
@@ -22,7 +22,8 @@ def select_underloaded_vms(underloaded):
             "vm_power": vm_powers[i]
             })
     
-    print("VMS TO MIGRATE (UNDERLOADED): ", vms_to_migrate)
+    #print("VMS TO MIGRATE (UNDERLOADED): ", vms_to_migrate)
+    #print("LENGTH: ", len(vms_to_migrate))
     return vms_to_migrate
 
 
@@ -99,4 +100,6 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
             vm_memories_mb.pop(best_idx)
             vm_cpu_shares.pop(best_idx)
 
+    #print("VMS TO MIGRATE (OVERLOADED): ", vms_to_migrate)
+    #print("LENGTH: ", len(vms_to_migrate))
     return vms_to_migrate

@@ -11,7 +11,9 @@ SELECT
     -- Capacities
     n.total_threads AS cpu_capacity,
     n.rated_power_usable AS power_capacity,
-    n.memory_size_gb * 1024 AS memory_capacity_mb,
+    --n.memory_size_gb * 1024 AS memory_capacity_mb,
+    (n.memory_total_bytes / (1024.0 * 1024.0)) AS memory_capacity_mb,
+    (n.memory_free_bytes / (1024.0 * 1024.0)) AS memory_available_mb,
 
     -- Host state
     CASE
@@ -61,4 +63,6 @@ GROUP BY
     n.ipmi_system_power_watts,
     n.total_threads,
     n.rated_power_usable,
-    n.memory_size_gb;
+    --n.memory_size_gb;
+    n.memory_total_bytes,      
+    n.memory_free_bytes;

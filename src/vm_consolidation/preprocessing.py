@@ -15,7 +15,7 @@ if not Path(f'{DATA_DIR}/processed/vm_final.parquet').exists():
     
     print("Preprocessing VM data...")
 
-    VM_HARDWARE = DATA_DIR / "vms/2024-12-14T000000Z_2025-04-13T235959Z/vms.csv"
+    VM_HARDWARE = DATA_DIR / "vms/2024-12-14T000000Z_2025-04-13T235959Z/vms_fixed.csv"
     VM_DATA = DATA_DIR / "nodes-vms/2024-12-14T000000Z_2025-04-13T235959Z/**/*.csv"
 
     # Import data into DuckDB
@@ -48,7 +48,8 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
 
     print("Preprocessing Node Snapshot data...")
 
-    NODES_FEATURES = DATA_DIR / "nodes_operational_features.parquet"
+    #NODES_FEATURES = DATA_DIR / "nodes_operational_features.parquet"
+    NODES_FEATURES = DATA_DIR / "engineered_features.parquet"
     con.execute(f"""CREATE TABLE nodes_table AS SELECT * FROM read_parquet('{NODES_FEATURES}')""")
     
     # compute node_snapshot
