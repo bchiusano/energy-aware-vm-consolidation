@@ -1,6 +1,7 @@
 def best_fit_placement(vms_to_migrate, hosts):
 
     placements = []
+    failed_placements = []
     
     for vm in sorted(vms_to_migrate,
                      key=lambda x: x["vm_power"],
@@ -13,6 +14,11 @@ def best_fit_placement(vms_to_migrate, hosts):
         #print(f"\n{'='*80}")
         #print(f"Placing VM {vm['vm_id']} (CPU: {vm_cpu}, Mem: {vm_memory}MB, Power: {vm_power}W)")
         #print(f"  Source: {vm['source_node']}")
+
+        # Resource tracking
+        insufficient_cpu = []
+        insufficient_memory = []
+        insufficient_power = []
 
         best_host = None
         best_remaining = float("inf")
@@ -42,25 +48,29 @@ def best_fit_placement(vms_to_migrate, hosts):
             mem_ok = vm_memory <= memory_available
             power_ok = vm_power <= power_available
 
+
             if cpu_ok and mem_ok and power_ok:
+                # TODO: this makes it a power-aware BFD with this remaining score.
                 remaining_score = power_available - vm_power
                 candidates.append((idx, host["node_name"], remaining_score))
 
                 if remaining_score < best_remaining:
                     best_remaining = remaining_score
                     best_host = idx
-            '''
             else:
                 # Show why this host was rejected
                 failures = []
                 if not cpu_ok:
-                    failures.append(f"CPU (need {vm_cpu}, have {cpu_available})")
+                    #failures.append(f"CPU (need {vm_cpu}, have {cpu_available})")
+                    insufficient_cpu.append(host["node_name"])
                 if not mem_ok:
-                    failures.append(f"Memory (need {vm_memory}MB, have {memory_available}MB)")
+                    #failures.append(f"Memory (need {vm_memory}MB, have {memory_available}MB)")
+                    insufficient_memory.append(host["node_name"])
                 if not power_ok:
-                    failures.append(f"Power (need {vm_power}W, have {power_available}W)")
-                print(f"  ✗ {host['node_name']}: {', '.join(failures)}")
-            '''
+                    #failures.append(f"Power (need {vm_power}W, have {power_available}W)")
+                    insufficient_power.append(host["node_name"])
+                #print(f"  ✗ {host['node_name']}: {', '.join(failures)}")
+    
 
         if best_host is not None:
             target_name = hosts.loc[best_host, "node_name"]
@@ -85,7 +95,18 @@ def best_fit_placement(vms_to_migrate, hosts):
                 + hosts.loc[best_host, "vm_power_allocated"]
             )
 
-        #else:
+        else:
+            # no valid target found for this VM
             #print(f"\n  ✗ No valid target found for VM {vm['vm_id']} (CPU: {vm_cpu}, Mem: {vm_memory}MB, Power: {vm_power}W)")
-
-    return placements
+            # TODO: not sure if I should just log the length of the insufficient lists instead of the host names, to avoid too much info in the logs
+            failed_placements.append({
+                "vm_id": vm["vm_id"],
+                "source_node": vm["source_node"],
+                "vm_power": vm_power,
+                "vm_cpu": vm_cpu,
+                "vm_memory_mb": vm_memory,
+                "insufficient_cpu_hosts": len(insufficient_cpu),
+                "insufficient_memory_hosts": len(insufficient_memory),
+                "insufficient_power_hosts": len(insufficient_power)
+            })
+    return placements, failed_placements

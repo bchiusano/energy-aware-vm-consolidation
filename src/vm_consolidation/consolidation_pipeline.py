@@ -5,19 +5,12 @@ from vm_placement_debug import best_fit_placement
 from tqdm import tqdm
 
 
-# helper functions for vm consolidation
-# show before consolidation
-# show after consolidation
-
 ROOT = Path(__file__).resolve().parents[2]
 SQL_DIR = ROOT / "src/sql"
 DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
 
 UPPER_THRESHOLD = 90
 LOWER_THRESHOLD = 10
-
-# for testing purposes
-TIMESTAMP = '2025-01-16 08:33:00'
 
 
 # print or display the resource utilization of hosts at a specific time or date
@@ -45,6 +38,8 @@ class VMConsolidation:
         underloaded = host_state[host_state["host_state"] == "underloaded"]
         targets = host_state[host_state["host_state"] == "normal"]
 
+        print(f"Overloaded hosts: {len(overloaded)}", f"Underloaded hosts: {len(underloaded)}", f"Target hosts: {len(targets)}")
+
         return overloaded, underloaded, targets
 
         
@@ -54,16 +49,17 @@ class VMConsolidation:
         underloaded_vms = select_underloaded_vms(underloaded=underloaded)
         overloaded_vms = minimization_of_migrations(overloaded=overloaded, UPPER_THRESHOLD=UPPER_THRESHOLD)
 
+        print(f"VMs to migrate from underloaded hosts: {len(underloaded_vms)}", f"VMs to migrate from overloaded hosts: {len(overloaded_vms)}")
+
         return underloaded_vms + overloaded_vms
 
     
     def vm_placement(self, migration_list, hosts):
         #print("VM Placement starts here:")
-        placements = best_fit_placement(vms_to_migrate=migration_list, hosts=hosts)
-        #print("PLACEMENTS: ")
-        #print(placements)
-        return placements
-    
+        placements, failed_placements = best_fit_placement(vms_to_migrate=migration_list, hosts=hosts)
+
+        return placements, failed_placements
+
 
     def update_host_state_after_migration(self, hosts, placements):
         # remove vms form source host and add to target host
@@ -101,7 +97,10 @@ if __name__ == "__main__":
 
     vm_consolidation = VMConsolidation(con)
     
+    # what to save for analysis
     simulated_frames = []
+    all_placements = []
+    all_failed_placements = []
     
     timestamps = con.execute("""
         SELECT DISTINCT timestamp AT TIME ZONE 'UTC'
@@ -109,12 +108,14 @@ if __name__ == "__main__":
         ORDER BY timestamp
     """).fetchall()
     
-    # TODO: is it correct that I'm iterating through the vm_final timestamps? Should I be iterating through the node_snapshot timestamps instead? 
+    # example checking for the first 3 timestamps
+    n = len(timestamps)
+    start_idx = n // 2 - 1  # 1 before middle
+    timestamps = timestamps[start_idx:start_idx+3]
+
     for t, in tqdm(timestamps, desc="Processing timestamps"):
     
-        #t = t + " UTC"
-        #print("TIMESTAMP: " , t)
-
+        print(f"Processing timestamp: {t}")
         # host detection - where placement_targets are the "normal" nodes in the host state
         host_df = con.execute(f"SELECT * FROM node_snapshot WHERE timestamp = '{t}'").df()
 
@@ -148,14 +149,33 @@ if __name__ == "__main__":
         vms_to_migrate = vm_consolidation.vm_selection(underloaded=underutilized, overloaded=overutilised)
 
         # vm placement
-        placements = vm_consolidation.vm_placement(migration_list=vms_to_migrate, hosts=placement_targets)
+        placements, failed_placements = vm_consolidation.vm_placement(migration_list=vms_to_migrate, hosts=placement_targets)
 
         # Update
         simulated_df_at_t= vm_consolidation.update_host_state_after_migration(simulated_df_at_t, placements)
+
+        # Save placements
+        all_placements.extend(placements)
+
+        # Save failed placements
+        all_failed_placements.extend(failed_placements)
 
         # Save
         simulated_frames.append(simulated_df_at_t)
     
     # Concatenate all simulated frames into a single DataFrame
+    # TODO: with this after I can check if hosts are still overloaded or not
+    print("Frames saved")
     simulated_df = pd.concat(simulated_frames, ignore_index=True)
-    simulated_df.to_parquet(f'{DATA_DIR}/processed/simulated_consolidation.parquet', index=False)
+    simulated_df.to_parquet(f'{DATA_DIR}/processed/simulated_example.parquet', index=False)
+
+    # Saving placements
+    # TODO: with this after I can check the VM migration frequency
+    print("Placements saved")
+    placements_df = pd.DataFrame(all_placements)
+    placements_df.to_parquet(f'{DATA_DIR}/processed/placements_example.parquet', index=False)
+
+    # Saving failed placements
+    print("Failed placements saved")
+    failed_placements_df = pd.DataFrame(all_failed_placements)
+    failed_placements_df.to_parquet(f'{DATA_DIR}/processed/failed_placements_example.parquet', index=False)

@@ -49,7 +49,7 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
     print("Preprocessing Node Snapshot data...")
 
     #NODES_FEATURES = DATA_DIR / "nodes_operational_features.parquet"
-    NODES_FEATURES = DATA_DIR / "engineered_features.parquet"
+    NODES_FEATURES = DATA_DIR / "engineered_features_new.parquet"
     con.execute(f"""CREATE TABLE nodes_table AS SELECT * FROM read_parquet('{NODES_FEATURES}')""")
     
     # compute node_snapshot
