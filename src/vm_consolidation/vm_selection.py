@@ -1,13 +1,14 @@
+import random
+
+# For Underloaded nodes, select all VMs for migration
 def select_underloaded_vms(underloaded):
+    #print("Selecting VMs from underloaded hosts")
     vms_to_migrate = []
 
-    # Underloaded nodes
     for _, row in underloaded.iterrows():
         if row["vm_count"] == 0:
             continue
 
-        #print("ROW: VMS", row["vm_ids"])
-        # this should already be lists
         vm_ids = list(row["vm_ids"])
         vm_cpus = list(row["vm_cpus"])
         vm_memories_mb = list(row["vm_memories_mb"])
@@ -22,13 +23,76 @@ def select_underloaded_vms(underloaded):
             "vm_power": vm_powers[i]
             })
     
-    #print("VMS TO MIGRATE (UNDERLOADED): ", vms_to_migrate)
-    #print("LENGTH: ", len(vms_to_migrate))
     return vms_to_migrate
 
 
+# TODO: I could try to estimate the cpu util without the power share calculation
+# For overloaded nodes, select Random VMs until we are under the threshold
+# Randomly select VMs until CPU utilization drops below UPPER_THRESHOLD
+def random_choice_policy(overloaded, UPPER_THRESHOLD, seed=None):
+
+    #print("Random Choice Policy")
+
+    if seed is not None:
+        random.seed(seed)
+
+    vms_to_migrate = []
+
+    for _, row in overloaded.iterrows():
+
+        cpu_util = row["cpu_usage_percent"]
+
+        if cpu_util <= UPPER_THRESHOLD:
+            continue
+
+        vm_ids = list(row["vm_ids"])
+        vm_cpus = list(row["vm_cpus"])
+        vm_memories_mb = list(row["vm_memories_mb"])
+        vm_powers = list(row["vm_powers"])
+
+        total_vm_power = sum(vm_powers)
+
+        # estimate each VM contribution to host utilization
+        vm_cpu_shares = []
+
+        for power in vm_powers:
+
+            if total_vm_power > 0:
+                share = cpu_util * (power / total_vm_power)
+            else:
+                share = 0
+
+            vm_cpu_shares.append(share)
+
+        while cpu_util > UPPER_THRESHOLD and vm_ids:
+
+            idx = random.randrange(len(vm_ids))
+
+            vms_to_migrate.append({
+                "vm_id": vm_ids[idx],
+                "source_node": row["node_name"],
+                "vm_cpu": vm_cpus[idx],
+                "vm_memory_mb": vm_memories_mb[idx],
+                "vm_power": vm_powers[idx]
+            })
+
+            # reduce estimated utilization
+            cpu_util -= vm_cpu_shares[idx]
+
+            # remove migrated VM
+            vm_ids.pop(idx)
+            vm_cpus.pop(idx)
+            vm_memories_mb.pop(idx)
+            vm_powers.pop(idx)
+            vm_cpu_shares.pop(idx)
+
+    return vms_to_migrate
+
+
+# For overloaded nodes
 def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
 
+    #print("Minimization of Migrations Policy")
     vms_to_migrate = []
 
     for _, row in overloaded.iterrows():
@@ -100,6 +164,4 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
             vm_memories_mb.pop(best_idx)
             vm_cpu_shares.pop(best_idx)
 
-    #print("VMS TO MIGRATE (OVERLOADED): ", vms_to_migrate)
-    #print("LENGTH: ", len(vms_to_migrate))
     return vms_to_migrate
