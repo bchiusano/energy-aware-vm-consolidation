@@ -132,6 +132,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         # Update
         simulated_df_at_t= update_host_state_after_migration(simulated_df_at_t, placements)
 
+        # TODO: should have only saved these once per day
         # Save placements
         all_placements.extend(placements)
 
