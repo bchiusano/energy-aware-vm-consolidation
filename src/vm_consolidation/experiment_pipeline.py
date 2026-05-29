@@ -17,9 +17,9 @@ EXPERIMENTS = [
 '''
 
 EXPERIMENTS = [
-    ("RC_PBFD", random_choice_policy, "power_bfd"),
-    ("MM_BFD", minimization_of_migrations, "cpu_bfd"),
-    ("RC_BFD", random_choice_policy, "cpu_bfd"),
+    ("GROUP_ALLOCATION_P_PFD", random_choice_policy, "power_bfd"),
+    #("MM_BFD", minimization_of_migrations, "cpu_bfd"),
+    #("RC_BFD", random_choice_policy, "cpu_bfd"),
 ]
 
 timestamps = con.execute("""

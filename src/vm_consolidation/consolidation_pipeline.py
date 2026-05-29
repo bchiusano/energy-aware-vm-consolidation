@@ -1,6 +1,7 @@
 import pandas as pd
 from vm_selection import select_underloaded_vms
-from vm_placement import bfd_placement
+#from vm_placement import bfd_placement
+from vm_placement_target_groups import bfd_placement
 from tqdm import tqdm
 from pathlib import Path
 
@@ -9,6 +10,8 @@ def host_detection(host_state):
     overloaded = host_state[host_state["host_state"] == "overloaded"]
     underloaded = host_state[host_state["host_state"] == "underloaded"]
     targets = host_state[host_state["host_state"] == "normal"]
+
+
 
     #print(f"Overloaded hosts: {len(overloaded)}", f"Underloaded hosts: {len(underloaded)}", f"Target hosts: {len(targets)}")
 
@@ -26,6 +29,7 @@ def vm_selection(underloaded, overloaded, upper_threshold, policy):
 
 def vm_placement(migration_list, hosts, policy):
     #print("VM Placement starts here:")
+
     placements, failed_placements = bfd_placement(vms_to_migrate=migration_list, hosts=hosts, policy=policy)
 
     return placements, failed_placements
@@ -91,7 +95,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
     # example checking for the first 3 timestamps
     #n = len(timestamps)
     #start_idx = n // 2 - 1  # 1 before middle
-    #timestamps = timestamps[start_idx:start_idx+3]
+    #timestamps = timestamps[start_idx:start_idx+1]
 
     for t, in tqdm(timestamps, desc="Processing timestamps"):
         
@@ -101,6 +105,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         vm_df = con.execute(f"""
             SELECT 
                 hypervisor_name,
+                hypervisor_group,
                 vm_id, vm_cpu, vm_memory_mb, vm_power
             FROM vm_final
             WHERE timestamp = '{t}'
@@ -109,14 +114,16 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
 
         vms_by_host = {}
         for host, group in vm_df.groupby('hypervisor_name'):
-            vms_by_host[host] = group[['vm_id', 'vm_cpu', 'vm_memory_mb', 'vm_power']].to_dict('records')
+            vms_by_host[host] = group[['vm_id', 'hypervisor_group', 'vm_cpu', 'vm_memory_mb', 'vm_power']].to_dict('records')
 
         # Now populate the host_df with this data
         host_df['vm_ids'] = host_df['node_name'].map(lambda x: [v['vm_id'] for v in vms_by_host.get(x, [])])
+        host_df['vm_hypervisor_groups'] = host_df['node_name'].map(lambda x: [v['hypervisor_group'] for v in vms_by_host.get(x, [])])
         host_df['vm_cpus'] = host_df['node_name'].map(lambda x: [v['vm_cpu'] for v in vms_by_host.get(x, [])])
         host_df['vm_memories_mb'] = host_df['node_name'].map(lambda x: [v['vm_memory_mb'] for v in vms_by_host.get(x, [])])
         host_df['vm_powers'] = host_df['node_name'].map(lambda x: [v['vm_power'] for v in vms_by_host.get(x, [])])
 
+        #print(host_df['vm_hypervisor_groups'])
         # new version of the host_df that I will mutate after placements
         simulated_df_at_t = host_df.copy(deep=True)
         
@@ -132,7 +139,6 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         # Update
         simulated_df_at_t= update_host_state_after_migration(simulated_df_at_t, placements)
 
-        # TODO: should have only saved these once per day
         # Save placements
         all_placements.extend(placements)
 

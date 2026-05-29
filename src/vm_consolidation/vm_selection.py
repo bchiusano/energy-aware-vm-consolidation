@@ -10,6 +10,7 @@ def select_underloaded_vms(underloaded):
             continue
 
         vm_ids = list(row["vm_ids"])
+        hypervisor_groups = list(row["vm_hypervisor_groups"])
         vm_cpus = list(row["vm_cpus"])
         vm_memories_mb = list(row["vm_memories_mb"])
         vm_powers = list(row["vm_powers"])
@@ -18,6 +19,7 @@ def select_underloaded_vms(underloaded):
             vms_to_migrate.append({
             "vm_id": vm_id,
             "source_node": row["node_name"],
+            "hypervisor_group": hypervisor_groups[i],
             "vm_cpu": vm_cpus[i],
             "vm_memory_mb": vm_memories_mb[i],
             "vm_power": vm_powers[i]
@@ -46,6 +48,7 @@ def random_choice_policy(overloaded, UPPER_THRESHOLD, seed=None):
             continue
 
         vm_ids = list(row["vm_ids"])
+        hypervisor_groups = list(row["vm_hypervisor_groups"])
         vm_cpus = list(row["vm_cpus"])
         vm_memories_mb = list(row["vm_memories_mb"])
         vm_powers = list(row["vm_powers"])
@@ -71,6 +74,7 @@ def random_choice_policy(overloaded, UPPER_THRESHOLD, seed=None):
             vms_to_migrate.append({
                 "vm_id": vm_ids[idx],
                 "source_node": row["node_name"],
+                "hypervisor_group": hypervisor_groups[idx],
                 "vm_cpu": vm_cpus[idx],
                 "vm_memory_mb": vm_memories_mb[idx],
                 "vm_power": vm_powers[idx]
@@ -81,6 +85,7 @@ def random_choice_policy(overloaded, UPPER_THRESHOLD, seed=None):
 
             # remove migrated VM
             vm_ids.pop(idx)
+            hypervisor_groups.pop(idx)
             vm_cpus.pop(idx)
             vm_memories_mb.pop(idx)
             vm_powers.pop(idx)
@@ -101,6 +106,7 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
             continue
 
         vm_ids = list(row["vm_ids"])
+        hypervisor_groups = list(row["vm_hypervisor_groups"])
         vm_cpus = list(row["vm_cpus"])
         vm_memories_mb = list(row["vm_memories_mb"])
         vm_powers = list(row["vm_powers"])
@@ -149,6 +155,7 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
             vms_to_migrate.append({
                 "vm_id": vm_ids[best_idx],
                 "source_node": row["node_name"],
+                "hypervisor_group": hypervisor_groups[best_idx],
                 "vm_cpu": vm_cpus[best_idx],
                 "vm_memory_mb": vm_memories_mb[best_idx],
                 "vm_power": vm_powers[best_idx]
@@ -159,6 +166,7 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
 
             # Remove migrated VM
             vm_ids.pop(best_idx)
+            hypervisor_groups.pop(best_idx)
             vm_powers.pop(best_idx)
             vm_cpus.pop(best_idx)
             vm_memories_mb.pop(best_idx)
