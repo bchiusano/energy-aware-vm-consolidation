@@ -27,8 +27,6 @@ def select_underloaded_vms(underloaded):
     
     return vms_to_migrate
 
-
-# TODO: I could try to estimate the cpu util without the power share calculation
 # For overloaded nodes, select Random VMs until we are under the threshold
 # Randomly select VMs until CPU utilization drops below UPPER_THRESHOLD
 def random_choice_policy(overloaded, UPPER_THRESHOLD, seed=None):
@@ -121,18 +119,21 @@ def minimization_of_migrations(overloaded, UPPER_THRESHOLD):
         for power in vm_powers:
 
             if total_vm_power > 0:
-                estimated_share = (
-                    cpu_util * power / total_vm_power
-                )
+                estimated_share = (cpu_util * power / total_vm_power)
             else:
                 estimated_share = 0
 
             vm_cpu_shares.append(estimated_share)
 
         while cpu_util > UPPER_THRESHOLD and vm_ids:
-
+            
+            # estimate vm power: 
+            total_vm_power = sum(vm_powers)
+            vm_cpu_shares = [cpu_util * p / total_vm_power for p in vm_powers]
+            
             overload = cpu_util - UPPER_THRESHOLD
 
+            # new search
             best_idx = None
             best_share = None
 

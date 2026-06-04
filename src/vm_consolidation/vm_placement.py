@@ -3,9 +3,16 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
     placements = []
     failed_placements = []
     
-    for vm in sorted(vms_to_migrate,
-                     key=lambda x: x["vm_power"],
-                     reverse=True):
+    if policy == "power_bfd":
+        vms = sorted(vms_to_migrate, key=lambda x: x["vm_power"], reverse=True)
+
+    elif policy == "cpu_bfd":
+        vms = sorted(vms_to_migrate, key=lambda x: x["vm_cpu"], reverse=True)
+
+    else:
+        vms = vms_to_migrate
+
+    for vm in vms:
 
         vm_memory = vm["vm_memory_mb"]
         vm_cpu = vm["vm_cpu"]
@@ -46,7 +53,8 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
             power_ok = vm_power <= power_available
 
 
-            if cpu_ok and mem_ok and power_ok:
+            #if cpu_ok and mem_ok and power_ok:
+            if mem_ok and power_ok:
                 
                 if policy == "power_bfd":
                     remaining_score = power_available - vm_power
