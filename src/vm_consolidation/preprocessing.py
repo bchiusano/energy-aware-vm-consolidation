@@ -5,9 +5,6 @@ ROOT = Path(__file__).resolve().parents[2]
 SQL_DIR = ROOT / "src/sql"
 DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
 
-UPPER_THRESHOLD = 90
-LOWER_THRESHOLD = 10
-
 # DUCKDB IN-MEMORY DATABASE
 con = ddb.connect(':memory:')
 
@@ -53,7 +50,7 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
     
     # compute node_snapshot
     # Also calculates over/under utilised nodes
-    con.execute(open(SQL_DIR / "03_build_node_snapshot.sql").read(), [UPPER_THRESHOLD, LOWER_THRESHOLD])
+    con.execute(open(SQL_DIR / "03_build_node_snapshot.sql").read())
 
     # persist
 
@@ -68,6 +65,5 @@ if not Path(f'{DATA_DIR}/processed/node_snapshot.parquet').exists():
     """)
 else: 
     # import node_snapshot.parquet into duckdb
-    #con.execute(f"""CREATE TABLE node_snapshot AS SELECT * FROM read_parquet('{DATA_DIR}/processed/node_snapshot.parquet')""")
     print("NODE SNAPSHOT exists, creating view")
     con.execute(f"""CREATE OR REPLACE VIEW node_snapshot AS SELECT * FROM read_parquet('{DATA_DIR}/processed/node_snapshot.parquet')""")

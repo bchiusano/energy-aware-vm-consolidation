@@ -1,19 +1,15 @@
 import pandas as pd
 from vm_selection import select_underloaded_vms
-#from vm_placement import bfd_placement
-from vm_placement_target_groups import bfd_placement
+from vm_placement import bfd_placement
+#from vm_placement_target_groups import bfd_placement
 from tqdm import tqdm
 from pathlib import Path
 
-def host_detection(host_state):
+def host_detection(host_state, upper_threshold=90, lower_threshold=10):
     
-    overloaded = host_state[host_state["host_state"] == "overloaded"]
-    underloaded = host_state[host_state["host_state"] == "underloaded"]
-    targets = host_state[host_state["host_state"] == "normal"]
-
-
-
-    #print(f"Overloaded hosts: {len(overloaded)}", f"Underloaded hosts: {len(underloaded)}", f"Target hosts: {len(targets)}")
+    overloaded = host_state[host_state["cpu_usage_percent"] > upper_threshold]
+    underloaded = host_state[host_state["cpu_usage_percent"] < lower_threshold]
+    targets = host_state[(host_state["cpu_usage_percent"] >= lower_threshold) & (host_state["cpu_usage_percent"] <= upper_threshold)]
 
     return overloaded, underloaded, targets
 
@@ -80,12 +76,12 @@ def save_results(simulated_frames, all_placements, all_failed_placements, OUTPUT
     placements_df.to_parquet(f'{output_dir}/placements_{experiment}.parquet', index=False)
 
     # Saving failed placements
-    print("Failed placements saved")
-    failed_placements_df = pd.DataFrame(all_failed_placements)
-    failed_placements_df.to_parquet(f'{output_dir}/failed_placements_{experiment}.parquet', index=False)
+    #print("Failed placements saved")
+    #failed_placements_df = pd.DataFrame(all_failed_placements)
+    #failed_placements_df.to_parquet(f'{output_dir}/failed_placements_{experiment}.parquet', index=False)
 
 
-def run_consolidation(timestamps, selection_policy, placement_policy, upper_threshold, name, con):
+def run_consolidation(timestamps, selection_policy, placement_policy, upper_threshold, lower_threshold, name, con):
 
     # what to save for analysis
     simulated_frames = []
@@ -128,7 +124,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         simulated_df_at_t = host_df.copy(deep=True)
         
         # host detection
-        overutilised, underutilized, placement_targets = host_detection(host_state=host_df)
+        overutilised, underutilized, placement_targets = host_detection(host_df, upper_threshold, lower_threshold)
 
         # vm selection
         vms_to_migrate = vm_selection(underloaded=underutilized, overloaded=overutilised, upper_threshold=upper_threshold, policy=selection_policy)
@@ -143,7 +139,8 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         all_placements.extend(placements)
 
         # Save failed placements
-        all_failed_placements.extend(failed_placements)
+        # TODO: removed this temporarily
+        #all_failed_placements.extend(failed_placements)
 
         # Save simulated frame
         simulated_frames.append(simulated_df_at_t)
