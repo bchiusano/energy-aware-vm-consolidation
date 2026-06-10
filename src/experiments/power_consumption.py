@@ -72,7 +72,7 @@ if __name__ == "__main__":
         ORDER BY timestamp
     """).df()
 
-    EXPERIMENTS = {
+    '''
         "mm_bfd": {
             "path": "MM_BFD_CPU/simulated_MM_BFD_CPU.parquet",
             "label": "MM + CPU",
@@ -93,17 +93,49 @@ if __name__ == "__main__":
             "label": "RC + POWER",
             "group": "RC",
         },
-        "mm_pbfd_30": {
-            "path": "MM_PBFD_0_30_NO_CPU/simulated_MM_PBFD_0_30_NO_CPU.parquet",
-            "label": "MM + POWER + 30",
-            "group": "MM",
-        },
-        "rc_pbfd_30": {
-            "path": "RC_PBFD_0_30_NO_CPU/simulated_RC_PBFD_0_30_NO_CPU.parquet",
-            "label": "RC + POWER + 30",
+    '''
+
+    EXPERIMENTS = {
+        "rc_pbfd": {
+            "path": "RC_PBFD/simulated_RC_PBFD.parquet",
+            "label": "RC + POWER - 10-90",
             "group": "RC",
         },
-
+        "rc_bfd": {
+            "path": "RC_BFD_CPU/simulated_RC_BFD_CPU.parquet",
+            "label": "RC + CPU + 10-90",
+            "group": "RC",
+        },    
+        "mm_pbfd_30_no_cpu": {
+            "path": "MM_PBFD_0_30_NO_CPU/simulated_MM_PBFD_0_30_NO_CPU.parquet",
+            "label": "MM + POWER + 0-30",
+            "group": "MM",
+        },
+        "mm_pbfd_10_30_no_cpu": {
+            "path": "MM_PBFD_10_30_NO_CPU/simulated_MM_PBFD_10_30_NO_CPU.parquet",
+            "label": "MM + POWER + 10-30 + NO CPU",
+            "group": "MM",
+        },
+        "mm_pbfd_10_30": {
+            "path": "MM_PBFD_10_30/simulated_MM_PBFD_10_30.parquet",
+            "label": "MM + POWER + 10-30",
+            "group": "MM",
+        },
+        "rc_pbfd_10_30": {
+            "path": "RC_PBFD_10_30/simulated_RC_PBFD_10_30.parquet",
+            "label": "RC + POWER + 10-30",
+            "group": "RC",
+        },
+        "rc_pbfd_20": {
+            "path": "RC_PBFD_20/simulated_RC_PBFD_20.parquet",
+            "label": "RC + POWER + 20-90",
+            "group": "RC",
+        },
+        "rc_cpu_bfd_20": {
+            "path": "RC_CPU_BFD_20/simulated_RC_CPU_BFD_20.parquet",
+            "label": "RC + CPU + 20-90",
+            "group": "RC",
+        },
     }
 
     power_df = baseline_power.copy()

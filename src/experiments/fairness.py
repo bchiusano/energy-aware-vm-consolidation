@@ -4,6 +4,14 @@ import numpy as np
 from pathlib import Path
 import pandas as pd
 
+
+def load_experiment(name, path):
+    con.execute(f"""
+        CREATE OR REPLACE VIEW {name} AS
+        SELECT *
+        FROM read_parquet('{RESULTS_DIR / path["path"]}')
+    """)
+
 def gini(x):
     x = np.array(x)
     if len(x) == 0:
@@ -117,31 +125,59 @@ if __name__ == "__main__":
     # User data
     con.query(f"""CREATE OR REPLACE TABLE vmhardware AS SELECT * FROM read_csv('{DATA_DIR}/vms/2024-12-14T000000Z_2025-04-13T235959Z/vms_fixed.csv')""")
 
-    # MM + BFD
-    con.execute(f"""CREATE OR REPLACE VIEW mm_bfd AS SELECT * FROM read_parquet('{RESULTS_DIR}/MM_BFD/placements_MM_BFD.parquet')""")
-
-    # MM + PBFD
-    con.execute(f"""CREATE OR REPLACE VIEW mm_pbfd AS SELECT * FROM read_parquet('{RESULTS_DIR}/MM_PBFD/placements_MM_PBFD.parquet')""")
-
-    # RC + BFD
-    con.execute(f"""CREATE OR REPLACE VIEW rc_bfd AS SELECT * FROM read_parquet('{RESULTS_DIR}/RC_BFD/placements_RC_BFD.parquet')""")
-
-    # RC + PBFD
-    con.execute(f"""CREATE OR REPLACE VIEW rc_pbfd AS SELECT * FROM read_parquet('{RESULTS_DIR}/RC_PBFD/placements_RC_PBFD.parquet')""")
-
-    show_count("rc_pbfd")
-    show_count("mm_pbfd")
-    show_count("rc_bfd")
-    show_count("mm_bfd")
+    EXPERIMENTS = {
+        "rc_pbfd": {
+            "path": "RC_PBFD/placements_RC_PBFD.parquet",
+            "label": "RC + POWER - 10-90",
+            "group": "RC",
+        },
+        "rc_bfd": {
+            "path": "RC_BFD_CPU/placements_RC_BFD_CPU.parquet",
+            "label": "RC + CPU + 10-90",
+            "group": "RC",
+        },    
+        "mm_pbfd_30_no_cpu": {
+            "path": "MM_PBFD_0_30_NO_CPU/placements_MM_PBFD_0_30_NO_CPU.parquet",
+            "label": "MM + POWER + 0-30",
+            "group": "MM",
+        },
+        "mm_pbfd_10_30_no_cpu": {
+            "path": "MM_PBFD_10_30_NO_CPU/placements_MM_PBFD_10_30_NO_CPU.parquet",
+            "label": "MM + POWER + 10-30 + NO CPU",
+            "group": "MM",
+        },
+        "mm_pbfd_10_30": {
+            "path": "MM_PBFD_10_30/placements_MM_PBFD_10_30.parquet",
+            "label": "MM + POWER + 10-30",
+            "group": "MM",
+        },
+        "rc_pbfd_10_30": {
+            "path": "RC_PBFD_10_30/placements_RC_PBFD_10_30.parquet",
+            "label": "RC + POWER + 10-30",
+            "group": "RC",
+        },
+        "rc_pbfd_20": {
+            "path": "RC_PBFD_20/placements_RC_PBFD_20.parquet",
+            "label": "RC + POWER + 20-90",
+            "group": "RC",
+        },
+        "rc_cpu_bfd_20": {
+            "path": "RC_CPU_BFD_20/placements_RC_CPU_BFD_20.parquet",
+            "label": "RC + CPU + 20-90",
+            "group": "RC",
+        },
+    }
 
     vm_user = con.query("""SELECT vm_id, user_id from vmhardware""").df()
-
     results = {}
 
-    results["RC+PBFD"] = compute_fairness("rc_pbfd", vm_user)
-    results["MM+PBFD"] = compute_fairness("mm_pbfd", vm_user)
-    results["RC+BFD"] = compute_fairness("rc_bfd", vm_user)
-    results["MM+BFD"] = compute_fairness("mm_bfd", vm_user)
+    for view_name, val in EXPERIMENTS.items():
+        
+        print(val["label"])
+        load_experiment(view_name, val)
+        show_count(view_name)
+        results[val["label"]] = compute_fairness(view_name, vm_user)
+
 
     summary = pd.DataFrame({
         "Experiment": results.keys(),
@@ -155,4 +191,3 @@ if __name__ == "__main__":
     plot_gini_comparison(summary)
     plot_jain_comparison(summary)
     plot_lorenz_comparison(results)
-
