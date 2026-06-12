@@ -5,22 +5,11 @@ from preprocessing import con
 
 
 EXPERIMENTS = [
-    #("MM_PBFD", minimization_of_migrations, "power_bfd"),
-    #("RC_PBFD", random_choice_policy, "power_bfd"),
-    #("MM_BFD", minimization_of_migrations, "cpu_bfd"),
-    #("RC_BFD", random_choice_policy, "cpu_bfd"),
-    #("MM_PBFD_20_NEW", minimization_of_migrations, "power_bfd"),
-    #("RC_PBFD_20", random_choice_policy, "power_bfd"),
-    #("MM_CPU_BFD_20_NEW", minimization_of_migrations, "cpu_bfd"),
-    #("RC_CPU_BFD_20", random_choice_policy, "cpu_bfd"),
-    #("GROUP_ALLOCATION_P_PFD", random_choice_policy, "power_bfd"),
-    #("MM_BFD", minimization_of_migrations, "cpu_bfd"),
-    #("RC_BFD", random_choice_policy, "cpu_bfd"),
-    #("MM_BFD_CPU", minimization_of_migrations, "cpu_bfd"),
-    #("RC_BFD_CPU", random_choice_policy, "cpu_bfd")
-    ("MM_PBFD_10_30_NO_CPU", minimization_of_migrations, "power_bfd"),
-    #("MM_PBFD_0_30_NO_CPU", minimization_of_migrations, "power_bfd"),
-    #("RC_PBFD_0_30_NO_CPU", random_choice_policy, "power_bfd"),
+    ("MM_CPU_BFD_20_30", minimization_of_migrations, "cpu_bfd"),
+    ("RC_CPU_BFD_20_30", random_choice_policy, "cpu_bfd"),
+
+    ("MM_PBFD_20_30", minimization_of_migrations, "power_bfd"),
+    ("RC_PBFD_20_30", random_choice_policy, "power_bfd"),
 ]
 
 
@@ -34,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SQL_DIR = ROOT / "src/sql"
 DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
 
-# TODO: current experiment # 30/10 no CPU
+# TODO: current experiment:  30/20 with CPU both MM and RC
 for name, selection, placement in EXPERIMENTS:
 
     print(f"Running {name}")
@@ -44,7 +33,7 @@ for name, selection, placement in EXPERIMENTS:
         selection_policy=selection,
         placement_policy=placement,
         upper_threshold=30,
-        lower_threshold=10,
+        lower_threshold=20,
         name=name,
         con=con
     )

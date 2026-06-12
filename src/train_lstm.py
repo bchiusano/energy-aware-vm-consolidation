@@ -9,6 +9,7 @@ from sklearn.metrics import root_mean_squared_error, mean_absolute_error
 from lstm_dataset import NodeSequenceDataset
 from models.lstm import LSTMNetwork
 from config import *
+import wandb
 
 # loading data
 clean_df = pd.read_parquet(DATAPATH)
@@ -24,9 +25,9 @@ for node, group in clean_df.groupby('node_name'):
     test_group  = group[group['timestamp'] > VAL_END_DATE].copy()
 
     # drop NaN rows before building sequences - lstms do not work well with missing data 
-    train_group = train_group.dropna(subset=LSTM_FEATURES + [TARGET])
-    val_group   = val_group.dropna(subset=LSTM_FEATURES + [TARGET])
-    test_group  = test_group.dropna(subset=LSTM_FEATURES + [TARGET])
+    train_group = train_group.dropna(subset=ALL_TABULAR_FEATURES + [TARGET])
+    val_group   = val_group.dropna(subset=ALL_TABULAR_FEATURES + [TARGET])
+    test_group  = test_group.dropna(subset=ALL_TABULAR_FEATURES + [TARGET])
 
     # skip if not enough rows to form even one sequence
     if len(train_group) <= T or len(val_group) <= T or len(test_group) <= T:
@@ -36,9 +37,9 @@ for node, group in clean_df.groupby('node_name'):
     # scale
     print(f"Scaling features for node: {node}")
     scaler = StandardScaler()
-    train_group[LSTM_FEATURES] = scaler.fit_transform(train_group[LSTM_FEATURES])
-    val_group[LSTM_FEATURES]   = scaler.transform(val_group[LSTM_FEATURES])
-    test_group[LSTM_FEATURES]  = scaler.transform(test_group[LSTM_FEATURES])
+    train_group[ALL_TABULAR_FEATURES] = scaler.fit_transform(train_group[ALL_TABULAR_FEATURES])
+    val_group[ALL_TABULAR_FEATURES]   = scaler.transform(val_group[ALL_TABULAR_FEATURES])
+    test_group[ALL_TABULAR_FEATURES]  = scaler.transform(test_group[ALL_TABULAR_FEATURES])
 
     train_dfs.append(train_group)
     val_dfs.append(val_group)
@@ -54,6 +55,23 @@ train_loader = DataLoader(NodeSequenceDataset(train_df, LSTM_FEATURES, TARGET, T
 val_loader = DataLoader(NodeSequenceDataset(val_df, LSTM_FEATURES, TARGET, T), batch_size=BATCH_SIZE)
 test_loader = DataLoader(NodeSequenceDataset(test_df, LSTM_FEATURES, TARGET, T), batch_size=BATCH_SIZE)
 
+# initialize wandb
+run = wandb.init(
+    # Set the wandb entity where your project will be logged (generally your team name).
+    entity="bee-present",
+    # Set the wandb project where this run will be logged.
+    project="lstm_thesis",
+    # Track hyperparameters and run metadata.
+    config={
+        "hidden": 64,
+        "n_layers": 2,
+        "dropout": 0.3,
+        "lr": 1e-3,
+        "architecture": "LSTM",
+        "epochs": 20,
+    },
+)
+
 # train model
 print("Training LSTM...")
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -68,7 +86,8 @@ patience, patience_counter = 10, 0
 
 train_loss_history, val_loss_history = [], []
 
-for epoch in range(1, 201):
+epochs = 20
+for epoch in range(1, epochs + 1):
     print(f"Epoch {epoch} starting...")
     model.train()
     train_losses = []
@@ -96,6 +115,9 @@ for epoch in range(1, 201):
     val_loss_history.append(val_loss)
     scheduler.step(val_loss)
 
+    # log to wandb
+    run.log({"train_loss": train_loss, "val_loss": val_loss, "epoch": epoch})
+
     if epoch % 10 == 0:
         print(f"Epoch {epoch} - Train Loss: {train_loss:.4f} - Val Loss: {val_loss:.4f}")
 
@@ -109,6 +131,7 @@ for epoch in range(1, 201):
             print(f"Early stopping triggered at epoch: {epoch}")
             break
 
+run.finish()
 
 print("Training complete.")
 # Plot training and validation loss

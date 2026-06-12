@@ -40,18 +40,18 @@ def lorenz(ax, data, label):
     ax.plot(pop, cum, label=label)
 
 
-def plot_lorenz_comparison(results):
+def plot_lorenz_comparison(results, type = "migrations_per_vm"):
     for name, res in results.items():
-        lorenz(plt, res["data"]["migrations_per_vm"], name)
+        lorenz(plt, res["data"][type], name)
 
     plt.plot([0,1],[0,1],'--',label="Perfect equality")
 
     plt.xlabel("Cumulative share of users")
     plt.ylabel("Cumulative share of migrations")
-    plt.title("Lorenz Curve Comparison Across Experiments")
+    plt.title(f"Lorenz Curve Comparison for {type}")
     plt.legend()
     plt.grid()
-    plt.savefig("lorenz_curves.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"lorenz_curves_{type}.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -73,30 +73,47 @@ def plot_jain_comparison(summary):
 
 
 def compute_fairness(experiment, vm_user):
-    
-    # select vms and migrations per vm for specific experiment
+
     vm_migrations = con.query(f"""
         SELECT vm_id, COUNT(*) AS migrations
         FROM {experiment}
         GROUP BY vm_id
     """).df()
 
-    user_migrations = vm_migrations.merge(vm_user, on="vm_id", how="left")
-    
-    user_migrations = user_migrations.groupby("user_id")["migrations"].sum().reset_index()
-    
-    user_vm_count = vm_user.groupby("user_id")["vm_id"].count().reset_index(name="num_vms")
-
-    user_migrations = user_migrations.merge(user_vm_count, on="user_id")
-
-    user_migrations["migrations_per_vm"] = (
-        user_migrations["migrations"] / user_migrations["num_vms"]
+    user_migrations = (
+        vm_migrations
+        .merge(vm_user, on="vm_id", how="left")
+        .groupby("user_id")["migrations"]
+        .sum()
+        .reset_index()
     )
 
-    # fairness metrics
+    # full user support (IMPORTANT for fairness)
+    all_users = vm_user[["user_id"]].drop_duplicates()
+
+    user_vm_count = (
+        vm_user.groupby("user_id")["vm_id"]
+        .nunique()
+        .reset_index(name="num_vms")
+    )
+
+    user_migrations = (
+        all_users
+        .merge(user_migrations, on="user_id", how="left")
+        .merge(user_vm_count, on="user_id", how="left")
+        .fillna(0)
+    )
+
+    # avoid division issues
+    user_migrations["migrations_per_vm"] = (
+        user_migrations["migrations"] / user_migrations["num_vms"].replace(0, np.nan)
+    ).fillna(0)
+
     return {
-        "gini": gini(user_migrations["migrations_per_vm"]),
-        "jain": jains_fairness(user_migrations["migrations_per_vm"]),
+        "gini_burden": gini(user_migrations["migrations"]),
+        "jain_burden": jains_fairness(user_migrations["migrations"]),
+        "gini_normalised": gini(user_migrations["migrations_per_vm"]),
+        "jain_normalised": jains_fairness(user_migrations["migrations_per_vm"]),
         "data": user_migrations
     }
 
@@ -125,11 +142,21 @@ if __name__ == "__main__":
     # User data
     con.query(f"""CREATE OR REPLACE TABLE vmhardware AS SELECT * FROM read_csv('{DATA_DIR}/vms/2024-12-14T000000Z_2025-04-13T235959Z/vms_fixed.csv')""")
 
-    EXPERIMENTS = {
-        "rc_pbfd": {
+    '''
+    "rc_pbfd": {
             "path": "RC_PBFD/placements_RC_PBFD.parquet",
             "label": "RC + POWER - 10-90",
             "group": "RC",
+        },
+        "mm_pbfd": {
+            "path": "MM_PBFD/placements_MM_PBFD.parquet",
+            "label": "MM + POWER + 10-90",
+            "group": "MM",
+        },
+         "mm_bfd": {
+            "path": "MM_BFD_CPU/placements_MM_BFD_CPU.parquet",
+            "label": "MM + CPU + 10-90",
+            "group": "MM",
         },
         "rc_bfd": {
             "path": "RC_BFD_CPU/placements_RC_BFD_CPU.parquet",
@@ -166,6 +193,23 @@ if __name__ == "__main__":
             "label": "RC + CPU + 20-90",
             "group": "RC",
         },
+    '''
+    EXPERIMENTS = {
+        "mm_pbfd": {
+            "path": "MM_PBFD/placements_MM_PBFD.parquet",
+            "label": "MM/POWER (10-90)",
+            "group": "MM",
+        },
+        "mm_pbfd_10_30": {
+            "path": "MM_PBFD_10_30/placements_MM_PBFD_10_30.parquet",
+            "label": "MM/POWER (10-30)",
+            "group": "MM",
+        },
+        "rc_pbfd_20": {
+            "path": "RC_PBFD_20/placements_RC_PBFD_20.parquet",
+            "label": "RC/POWER (20-90)",
+            "group": "RC",
+        },
     }
 
     vm_user = con.query("""SELECT vm_id, user_id from vmhardware""").df()
@@ -179,15 +223,27 @@ if __name__ == "__main__":
         results[val["label"]] = compute_fairness(view_name, vm_user)
 
 
-    summary = pd.DataFrame({
+    summary_burden = pd.DataFrame({
         "Experiment": results.keys(),
-        "Gini": [results[k]["gini"] for k in results],
-        "Jain": [results[k]["jain"] for k in results]
+        "Gini": [results[k]["gini_burden"] for k in results],
+        "Jain": [results[k]["jain_burden"] for k in results]
     })
 
-    print(summary)
+    summary_normalised = pd.DataFrame({
+        "Experiment": results.keys(),
+        "Gini": [results[k]["gini_normalised"] for k in results],
+        "Jain": [results[k]["jain_normalised"] for k in results]
+    })
+
+    print(summary_burden)
+    print(summary_normalised)
 
     # plots
-    plot_gini_comparison(summary)
-    plot_jain_comparison(summary)
-    plot_lorenz_comparison(results)
+    plot_gini_comparison(summary_burden)
+    plot_jain_comparison(summary_burden)
+    plot_lorenz_comparison(results, type="migrations")
+
+    plot_gini_comparison(summary_normalised)
+    plot_jain_comparison(summary_normalised)
+    plot_lorenz_comparison(results, type="migrations_per_vm")
+    

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 BASE = Path.cwd()
-DATAPATH = BASE / "datasets/cloud_energy_consumption/full_nodes_featurestwo.parquet"
+DATAPATH = BASE / "datasets/cloud_energy_consumption/features.parquet"
 CHECKPOINT   = BASE / "src/checkpoints/best_lstm.pt"
 
 T = 80 # 4 hours at 3-minute resolution
@@ -28,4 +28,4 @@ LAG_FEATURES = ([f'power_lag_{lag}' for lag in LAG_STEPS] +
 HARDWARE_FEATURES = ['total_threads', 'total_cores', 'rated_power_usable', 'cpu_freq_ghz', 'has_gpu']
 
 ALL_TABULAR_FEATURES = OPERATIONAL_FEATURES + TIME_FEATURES + LAG_FEATURES + HARDWARE_FEATURES
-LSTM_FEATURES = OPERATIONAL_FEATURES + TIME_FEATURES
+#LSTM_FEATURES = OPERATIONAL_FEATURES + TIME_FEATURES

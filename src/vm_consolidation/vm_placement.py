@@ -53,8 +53,8 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
             power_ok = vm_power <= power_available
 
 
-            #if cpu_ok and mem_ok and power_ok:
-            if mem_ok and power_ok:
+            if cpu_ok and mem_ok and power_ok:
+            #if mem_ok and power_ok:
                 
                 if policy == "power_bfd":
                     remaining_score = power_available - vm_power
