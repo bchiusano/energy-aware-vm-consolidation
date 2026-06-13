@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+import matplotlib.pyplot as plt
 
 # combinations
 scopes = ["operational", "life-cycle"]
@@ -98,6 +99,71 @@ def calculate_reduction(baseline_footprints, experiment_footprints):
     return merged
 
 # Bar Plot
+def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
+    """
+    Plot water_operational_local (m3) and carbon_operational_local (kg)
+    for baseline and all experiments
+    
+    Args:
+        all_footprints_dict: Dict with keys = scenario names, values = footprints DataFrames
+    """
+    # Extract specific metrics
+    data_to_plot = []
+    
+    for scenario_name, fp_df in all_footprints_dict.items():
+        # Water operational local (m3)
+        water_local = fp_df[
+            (fp_df["footprint_type"] == "water") & 
+            (fp_df["scope"] == scope_param) & 
+            (fp_df["coverage"] == coverage_param)
+        ]["total_m3"].values[0]
+        
+        # Carbon operational local (kg)
+        carbon_local = fp_df[
+            (fp_df["footprint_type"] == "carbon") & 
+            (fp_df["scope"] == scope_param) & 
+            (fp_df["coverage"] == coverage_param)
+        ]["total_kg"].values[0]
+        
+        data_to_plot.append({
+            "scenario": scenario_name,
+            "water_m3": water_local,
+            "carbon_kg": carbon_local
+        })
+    
+    plot_df = pd.DataFrame(data_to_plot)
+    
+    # Create subplots
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    
+    # Plot 1: Carbon (kg)
+    axes[0].bar(plot_df["scenario"], plot_df["carbon_kg"], color="steelblue", alpha=0.7)
+    axes[0].set_title("Carbon Emissions (Operational, Local)", fontsize=12, fontweight="bold")
+    axes[0].set_ylabel("CO₂ (kg)", fontsize=11)
+    axes[0].set_xlabel("Scenario", fontsize=11)
+    axes[0].tick_params(axis="x", rotation=45)
+    axes[0].grid(axis="y", alpha=0.3)
+    # Cut y-axis to show differences better
+    carbon_min = plot_df["carbon_kg"].min()
+    carbon_max = plot_df["carbon_kg"].max()
+    carbon_range = carbon_max - carbon_min
+    axes[0].set_ylim(carbon_min - 0.1 * carbon_range, carbon_max + 0.1 * carbon_range)
+    
+    # Plot 2: Water (m3)
+    axes[1].bar(plot_df["scenario"], plot_df["water_m3"], color="seagreen", alpha=0.7)
+    axes[1].set_title("Water Consumption (Operational, Local)", fontsize=12, fontweight="bold")
+    axes[1].set_ylabel("Water (m³)", fontsize=11)
+    axes[1].set_xlabel("Scenario", fontsize=11)
+    axes[1].tick_params(axis="x", rotation=45)
+    axes[1].grid(axis="y", alpha=0.3)
+    # Cut y-axis to show differences better
+    water_min = plot_df["water_m3"].min()
+    water_max = plot_df["water_m3"].max()
+    water_range = water_max - water_min
+    axes[1].set_ylim(water_min - 0.1 * water_range, water_max + 0.1 * water_range)
+    
+    plt.tight_layout()
+    return fig, plot_df
 
 # Scatter plot
 
@@ -130,10 +196,10 @@ if __name__ == "__main__":
             "label": "MM/POWER (10-30)",
             "group": "MM",
         },
-        "mm_cpu_bfd_10_30": {
-            "path": "MM_CPU_BFD_10_30/simulated_MM_CPU_BFD_10_30.parquet",
-            "label": "MM/CPU (10-30)",
-            "group": "MM",
+        "rc_pbfd_10_30": {
+            "path": "RC_PBFD_10_30/simulated_RC_PBFD_10_30.parquet",
+            "label": "RC/POWER (10-30)",
+            "group": "RC",
         },
         
         ########### 20-30 ###########
@@ -142,10 +208,10 @@ if __name__ == "__main__":
             "label": "MM/POWER (20-30)",
             "group": "MM",
         },
-        "mm_cpu_bfd_20_30": {
-            "path": "MM_CPU_BFD_20_30/simulated_MM_CPU_BFD_20_30.parquet",
-            "label": "MM/CPU (20-30)",
-            "group": "MM",
+        "rc_pbfd_20_30": {
+            "path": "RC_PBFD_20_30/simulated_RC_PBFD_20_30.parquet",
+            "label": "RC/POWER (20-30)",
+            "group": "RC",
         },
 
         ########### 10-90 ###########
@@ -154,16 +220,44 @@ if __name__ == "__main__":
             "label": "MM/POWER (10-90)",
             "group": "MM",
         },
-        "mm_bfd_cpu_10_90": {
-            "path": "MM_BFD_CPU/simulated_MM_BFD_CPU.parquet",
-            "label": "MM/CPU (10-90)",
+        "rc_pbfd_10_90": {
+            "path": "RC_PBFD/simulated_RC_PBFD.parquet",
+            "label": "RC/POWER (10-90)",
+            "group": "RC",
+        },
+
+        ########### 20-90 ###########
+        "mm_pbfd_20_90": {
+            "path": "MM_PBFD_20/simulated_MM_PBFD_20.parquet",
+            "label": "MM/POWER (20-90)",
             "group": "MM",
+        },
+        "rc_pbfd_20_90": {
+            "path": "RC_PBFD_20/simulated_RC_PBFD_20.parquet",
+            "label": "RC/POWER (20-90)",
+            "group": "RC",
         },
     }
     
+    #all_footprints = {"Baseline": baseline_footprints}
+    all_footprints = {}
+
     for view_name, cfg in EXPERIMENTS.items():
+        
         print("EXPERIMENT: ", view_name)
+        
         exp_merged_data = load_simulation(path=f"{RESULTS_DIR}/{cfg["path"]}", footprints=wattnet)
-        #print(exp_merged_data)
         exp_footprints = calculate_footprints(exp_merged_data)
-        print(exp_footprints)
+        
+        all_footprints[cfg["label"]] = exp_footprints
+
+    
+    # Plot comparison
+    scope = "life-cycle"
+    coverage = "global"
+
+    fig, plot_df = plot_specific_footprints(all_footprints_dict=all_footprints, scope_param=scope, coverage_param=coverage)
+    plt.savefig("footprint_comparison_global_lc_mm_pbfd.png", dpi=300, bbox_inches="tight")
+    print("\nPlot saved to footprint_comparison.png")
+    print("\nComparison summary:")
+    print(plot_df)
