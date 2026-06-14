@@ -2,6 +2,7 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 from experiment_names import *
+import numpy as np
 
 # combinations
 scopes = ["operational", "life-cycle"]
@@ -102,69 +103,112 @@ def calculate_reduction(baseline_footprints, experiment_footprints):
 # Bar Plot
 def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
     """
-    Plot water_operational_local (m3) and carbon_operational_local (kg)
-    for baseline and all experiments
+    Plot water and carbon footprints grouped by threshold,
+    with POWER and CPU as adjacent bars within each threshold group.
     
     Args:
         all_footprints_dict: Dict with keys = scenario names, values = footprints DataFrames
     """
-    # Extract specific metrics
-    data_to_plot = []
+    # Parse scenarios into threshold and variant
+    parsed_data = []
     
     for scenario_name, fp_df in all_footprints_dict.items():
-        # Water operational local (m3)
-        water_local = fp_df[
+        # Extract variant (POWER or CPU) and threshold from scenario name
+        # Assumes format: "MM/POWER (0-30)" or "MM/CPU (10-90)"
+        if "POWER" in scenario_name:
+            variant = "POWER"
+        elif "CPU" in scenario_name:
+            variant = "CPU"
+        else:
+            continue
+        
+        # Extract threshold (e.g., "0-30" from "MM/POWER (0-30)")
+        threshold_start = scenario_name.rfind("(") + 1
+        threshold_end = scenario_name.rfind(")")
+        threshold = scenario_name[threshold_start:threshold_end]
+        
+        # Get water and carbon values
+        water_val = fp_df[
             (fp_df["footprint_type"] == "water") & 
             (fp_df["scope"] == scope_param) & 
             (fp_df["coverage"] == coverage_param)
         ]["total_m3"].values[0]
         
-        # Carbon operational local (kg)
-        carbon_local = fp_df[
+        carbon_val = fp_df[
             (fp_df["footprint_type"] == "carbon") & 
             (fp_df["scope"] == scope_param) & 
             (fp_df["coverage"] == coverage_param)
         ]["total_kg"].values[0]
         
-        data_to_plot.append({
-            "scenario": scenario_name,
-            "water_m3": water_local,
-            "carbon_kg": carbon_local
+        parsed_data.append({
+            "threshold": threshold,
+            "variant": variant,
+            "water_m3": water_val,
+            "carbon_kg": carbon_val
         })
     
-    plot_df = pd.DataFrame(data_to_plot)
+    parse_df = pd.DataFrame(parsed_data)
+    
+    # Get unique thresholds in order
+    thresholds = parse_df["threshold"].unique()
+    thresholds_sorted = sorted(thresholds, key=lambda x: tuple(map(int, x.split("-"))))
+    
+    # Prepare data for grouped bars
+    x = np.arange(len(thresholds_sorted))
+    width = 0.35  # width of bars
+    
+    carbon_power = []
+    carbon_cpu = []
+    water_power = []
+    water_cpu = []
+    
+    for thresh in thresholds_sorted:
+        power_data = parse_df[(parse_df["threshold"] == thresh) & (parse_df["variant"] == "POWER")]
+        cpu_data = parse_df[(parse_df["threshold"] == thresh) & (parse_df["variant"] == "CPU")]
+        
+        carbon_power.append(power_data["carbon_kg"].values[0] if len(power_data) > 0 else 0)
+        carbon_cpu.append(cpu_data["carbon_kg"].values[0] if len(cpu_data) > 0 else 0)
+        water_power.append(power_data["water_m3"].values[0] if len(power_data) > 0 else 0)
+        water_cpu.append(cpu_data["water_m3"].values[0] if len(cpu_data) > 0 else 0)
     
     # Create subplots
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
     
     # Plot 1: Carbon (kg)
-    axes[0].bar(plot_df["scenario"], plot_df["carbon_kg"], color="steelblue", alpha=0.7)
-    axes[0].set_title("Carbon Emissions (Operational, Local)", fontsize=12, fontweight="bold")
+    axes[0].bar(x - width/2, carbon_power, width, label="POWER", color="steelblue", alpha=0.7)
+    axes[0].bar(x + width/2, carbon_cpu, width, label="CPU", color="steelblue", alpha=0.5)
+    axes[0].set_title(f"Carbon Emissions ({scope_param}, {coverage_param})", fontsize=12, fontweight="bold")
     axes[0].set_ylabel("CO₂ (kg)", fontsize=11)
-    axes[0].set_xlabel("Scenario", fontsize=11)
-    axes[0].tick_params(axis="x", rotation=45)
+    axes[0].set_xlabel("Threshold", fontsize=11)
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(thresholds_sorted)
+    axes[0].legend(loc="upper left", fontsize=10)
     axes[0].grid(axis="y", alpha=0.3)
     # Cut y-axis to show differences better
-    carbon_min = plot_df["carbon_kg"].min()
-    carbon_max = plot_df["carbon_kg"].max()
+    carbon_min = min(min(carbon_cpu), min(carbon_power))
+    carbon_max = max(max(carbon_cpu), max(carbon_power))
     carbon_range = carbon_max - carbon_min
     axes[0].set_ylim(carbon_min - 0.1 * carbon_range, carbon_max + 0.1 * carbon_range)
     
     # Plot 2: Water (m3)
-    axes[1].bar(plot_df["scenario"], plot_df["water_m3"], color="seagreen", alpha=0.7)
-    axes[1].set_title("Water Consumption (Operational, Local)", fontsize=12, fontweight="bold")
+    axes[1].bar(x - width/2, water_power, width, label="POWER", color="seagreen", alpha=0.7)
+    axes[1].bar(x + width/2, water_cpu, width, label="CPU", color="seagreen", alpha=0.5)
+    axes[1].set_title(f"Water Consumption ({scope_param}, {coverage_param})", fontsize=12, fontweight="bold")
     axes[1].set_ylabel("Water (m³)", fontsize=11)
-    axes[1].set_xlabel("Scenario", fontsize=11)
-    axes[1].tick_params(axis="x", rotation=45)
+    axes[1].set_xlabel("Threshold", fontsize=11)
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(thresholds_sorted)
+    axes[1].legend(loc="upper left", fontsize=10)
     axes[1].grid(axis="y", alpha=0.3)
-    # Cut y-axis to show differences better
-    water_min = plot_df["water_m3"].min()
-    water_max = plot_df["water_m3"].max()
+    # Same for water
+    water_min = min(min(water_cpu), min(water_power))
+    water_max = max(max(water_cpu), max(water_power))
     water_range = water_max - water_min
     axes[1].set_ylim(water_min - 0.1 * water_range, water_max + 0.1 * water_range)
     
     plt.tight_layout()
-    return fig, plot_df
+    
+    return fig, parse_df
 
 # Scatter plot
 
@@ -213,7 +257,7 @@ if __name__ == "__main__":
     coverage = "global"
 
     fig, plot_df = plot_specific_footprints(all_footprints_dict=all_footprints, scope_param=scope, coverage_param=coverage)
-    plt.savefig("footprint_comparison_global_lc_mm_pbfd.png", dpi=300, bbox_inches="tight")
-    print("\nPlot saved to footprint_comparison.png")
+    plt.savefig("footprint_comparison_global_lc_new.png", dpi=300, bbox_inches="tight")
+    print("\nPlot saved")
     print("\nComparison summary:")
     print(plot_df)

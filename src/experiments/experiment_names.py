@@ -6,11 +6,13 @@ PBFD_SIMULATIONS = {
             "path": "MM_PBFD_0_30/simulated_MM_PBFD_0_30.parquet",
             "label": "MM/POWER (0-30)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_0_30": {
             "path": "RC_PBFD_0_30/simulated_RC_PBFD_0_30.parquet",
             "label": "RC/POWER (0-30)",
             "group": "RC",
+            "type": "POWER"
         },
 
         ########### 10-30 ###########
@@ -18,11 +20,13 @@ PBFD_SIMULATIONS = {
             "path": "MM_PBFD_10_30/simulated_MM_PBFD_10_30.parquet",
             "label": "MM/POWER (10-30)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_10_30": {
             "path": "RC_PBFD_10_30/simulated_RC_PBFD_10_30.parquet",
             "label": "RC/POWER (10-30)",
             "group": "RC",
+            "type": "POWER"
         },
         
         ########### 20-30 ###########
@@ -30,11 +34,13 @@ PBFD_SIMULATIONS = {
             "path": "MM_PBFD_20_30/simulated_MM_PBFD_20_30.parquet",
             "label": "MM/POWER (20-30)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_20_30": {
             "path": "RC_PBFD_20_30/simulated_RC_PBFD_20_30.parquet",
             "label": "RC/POWER (20-30)",
             "group": "RC",
+            "type": "POWER"
         },
 
         ########### 10-90 ###########
@@ -42,11 +48,13 @@ PBFD_SIMULATIONS = {
             "path": "MM_PBFD/simulated_MM_PBFD.parquet",
             "label": "MM/POWER (10-90)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_10_90": {
             "path": "RC_PBFD/simulated_RC_PBFD.parquet",
             "label": "RC/POWER (10-90)",
             "group": "RC",
+            "type": "POWER"
         },
 
         ########### 20-90 ###########
@@ -54,11 +62,13 @@ PBFD_SIMULATIONS = {
             "path": "MM_PBFD_20/simulated_MM_PBFD_20.parquet",
             "label": "MM/POWER (20-90)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_20_90": {
             "path": "RC_PBFD_20/simulated_RC_PBFD_20.parquet",
             "label": "RC/POWER (20-90)",
             "group": "RC",
+            "type": "POWER"
         },
     }
 
@@ -68,11 +78,13 @@ PBFD_PLACEMENTS = {
             "path": "MM_PBFD_0_30/placements_MM_PBFD_0_30.parquet",
             "label": "MM/POWER (0-30)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_0_30": {
             "path": "RC_PBFD_0_30/placements_RC_PBFD_0_30.parquet",
             "label": "RC/POWER (0-30)",
             "group": "RC",
+            "type": "POWER"
         },
 
         ########### 10-30 ###########
@@ -80,11 +92,13 @@ PBFD_PLACEMENTS = {
             "path": "MM_PBFD_10_30/placements_MM_PBFD_10_30.parquet",
             "label": "MM/POWER (10-30)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_10_30": {
             "path": "RC_PBFD_10_30/placements_RC_PBFD_10_30.parquet",
             "label": "RC/POWER (10-30)",
             "group": "RC",
+            "type": "POWER"
         },
         
         ########### 20-30 ###########
@@ -92,11 +106,13 @@ PBFD_PLACEMENTS = {
             "path": "MM_PBFD_20_30/placements_MM_PBFD_20_30.parquet",
             "label": "MM/POWER (20-30)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_20_30": {
             "path": "RC_PBFD_20_30/placements_RC_PBFD_20_30.parquet",
             "label": "RC/POWER (20-30)",
             "group": "RC",
+            "type": "POWER"
         },
 
         ########### 10-90 ###########
@@ -104,11 +120,13 @@ PBFD_PLACEMENTS = {
             "path": "MM_PBFD/placements_MM_PBFD.parquet",
             "label": "MM/POWER (10-90)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_10_90": {
             "path": "RC_PBFD/placements_RC_PBFD.parquet",
             "label": "RC/POWER (10-90)",
             "group": "RC",
+            "type": "POWER"
         },
 
         ########### 20-90 ###########
@@ -116,11 +134,13 @@ PBFD_PLACEMENTS = {
             "path": "MM_PBFD_20/placements_MM_PBFD_20.parquet",
             "label": "MM/POWER (20-90)",
             "group": "MM",
+            "type": "POWER"
         },
         "rc_pbfd_20_90": {
             "path": "RC_PBFD_20/placements_RC_PBFD_20.parquet",
             "label": "RC/POWER (20-90)",
             "group": "RC",
+            "type": "POWER"
         },
     }
 
@@ -132,11 +152,13 @@ CPU_SIMULATIONS = {
             "path": "MM_CPU_BFD_0_30/simulated_MM_CPU_BFD_0_30.parquet",
             "label": "MM/CPU (0-30)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_0_30": {
             "path": "RC_CPU_BFD_0_30/simulated_RC_CPU_BFD_0_30.parquet",
             "label": "RC/CPU (0-30)",
             "group": "RC",
+            "type": "CPU"
         },
 
         ########### 10-30 ###########
@@ -144,11 +166,13 @@ CPU_SIMULATIONS = {
             "path": "MM_CPU_BFD_10_30/simulated_MM_CPU_BFD_10_30.parquet",
             "label": "MM/CPU (10-30)",
             "group": "MM",
+            "type": "CPU"
         },
         #"rc_cpu_bfd_10_30": {
         #    "path": "RC_CPU_BFD_10_30/simulated_RC_CPU_BFD_10_30.parquet",
         #    "label": "RC/CPU (10-30)",
         #    "group": "RC",
+        #.   "type": "CPU"
         #},
         
         ########### 20-30 ###########
@@ -156,11 +180,13 @@ CPU_SIMULATIONS = {
             "path": "MM_CPU_BFD_20_30/simulated_MM_CPU_BFD_20_30.parquet",
             "label": "MM/CPU (20-30)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_20_30": {
             "path": "RC_CPU_BFD_20_30/simulated_RC_CPU_BFD_20_30.parquet",
             "label": "RC/CPU (20-30)",
             "group": "RC",
+            "type": "CPU"
         },
 
         ########### 10-90 ###########
@@ -168,11 +194,13 @@ CPU_SIMULATIONS = {
             "path": "MM_BFD_CPU/simulated_MM_BFD_CPU.parquet",
             "label": "MM/CPU (10-90)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_10_90": {
             "path": "RC_BFD_CPU/simulated_RC_BFD_CPU.parquet",
             "label": "RC/CPU (10-90)",
             "group": "RC",
+            "type": "CPU"
         },
 
         ########### 20-90 ###########
@@ -180,11 +208,13 @@ CPU_SIMULATIONS = {
             "path": "MM_CPU_BFD_20/simulated_MM_CPU_BFD_20.parquet",
             "label": "MM/CPU (20-90)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_20_90": {
             "path": "RC_CPU_BFD_20/simulated_RC_CPU_BFD_20.parquet",
             "label": "RC/CPU (20-90)",
             "group": "RC",
+            "type": "CPU"
         },
     }
 
@@ -194,11 +224,13 @@ CPU_PLACEMENTS = {
             "path": "MM_CPU_BFD_0_30/placements_MM_CPU_BFD_0_30.parquet",
             "label": "MM/CPU (0-30)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_0_30": {
             "path": "RC_CPU_BFD_0_30/placements_RC_CPU_BFD_0_30.parquet",
             "label": "RC/CPU (0-30)",
             "group": "RC",
+            "type": "CPU"
         },
 
         ########### 10-30 ###########
@@ -206,11 +238,13 @@ CPU_PLACEMENTS = {
             "path": "MM_CPU_BFD_10_30/placements_MM_CPU_BFD_10_30.parquet",
             "label": "MM/CPU (10-30)",
             "group": "MM",
+            "type": "CPU"
         },
         #"rc_cpu_bfd_10_30": {
         #    "path": "RC_CPU_BFD_10_30/placements_RC_CPU_BFD_10_30.parquet",
         #    "label": "RC/CPU (10-30)",
         #    "group": "RC",
+        #   "type": "CPU"
         #},
         
         ########### 20-30 ###########
@@ -218,11 +252,13 @@ CPU_PLACEMENTS = {
             "path": "MM_CPU_BFD_20_30/placements_MM_CPU_BFD_20_30.parquet",
             "label": "MM/CPU (20-30)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_20_30": {
             "path": "RC_CPU_BFD_20_30/placements_RC_CPU_BFD_20_30.parquet",
             "label": "RC/CPU (20-30)",
             "group": "RC",
+            "type": "CPU"
         },
 
         ########### 10-90 ###########
@@ -230,11 +266,13 @@ CPU_PLACEMENTS = {
             "path": "MM_BFD_CPU/placements_MM_BFD_CPU.parquet",
             "label": "MM/CPU (10-90)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_10_90": {
             "path": "RC_BFD_CPU/placements_RC_BFD_CPU.parquet",
             "label": "RC/CPU (10-90)",
             "group": "RC",
+            "type": "CPU"
         },
 
         ########### 20-90 ###########
@@ -242,10 +280,12 @@ CPU_PLACEMENTS = {
             "path": "MM_CPU_BFD_20/placements_MM_CPU_BFD_20.parquet",
             "label": "MM/CPU (20-90)",
             "group": "MM",
+            "type": "CPU"
         },
         "rc_cpu_bfd_20_90": {
             "path": "RC_CPU_BFD_20/placements_RC_CPU_BFD_20.parquet",
             "label": "RC/CPU (20-90)",
             "group": "RC",
+            "type": "CPU"
         },
     }
