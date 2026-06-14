@@ -1,6 +1,7 @@
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from experiment_names import *
 
 # combinations
 scopes = ["operational", "life-cycle"]
@@ -189,55 +190,7 @@ if __name__ == "__main__":
     # TODO: also add baseline 2
     
     # load experiment
-    EXPERIMENTS = {
-        ########### 10-30 ###########
-        "mm_pbfd_10_30": {
-            "path": "MM_PBFD_10_30/simulated_MM_PBFD_10_30.parquet",
-            "label": "MM/POWER (10-30)",
-            "group": "MM",
-        },
-        "rc_pbfd_10_30": {
-            "path": "RC_PBFD_10_30/simulated_RC_PBFD_10_30.parquet",
-            "label": "RC/POWER (10-30)",
-            "group": "RC",
-        },
-        
-        ########### 20-30 ###########
-        "mm_pbfd_20_30": {
-            "path": "MM_PBFD_20_30/simulated_MM_PBFD_20_30.parquet",
-            "label": "MM/POWER (20-30)",
-            "group": "MM",
-        },
-        "rc_pbfd_20_30": {
-            "path": "RC_PBFD_20_30/simulated_RC_PBFD_20_30.parquet",
-            "label": "RC/POWER (20-30)",
-            "group": "RC",
-        },
-
-        ########### 10-90 ###########
-        "mm_pbfd_10_90": {
-            "path": "MM_PBFD/simulated_MM_PBFD.parquet",
-            "label": "MM/POWER (10-90)",
-            "group": "MM",
-        },
-        "rc_pbfd_10_90": {
-            "path": "RC_PBFD/simulated_RC_PBFD.parquet",
-            "label": "RC/POWER (10-90)",
-            "group": "RC",
-        },
-
-        ########### 20-90 ###########
-        "mm_pbfd_20_90": {
-            "path": "MM_PBFD_20/simulated_MM_PBFD_20.parquet",
-            "label": "MM/POWER (20-90)",
-            "group": "MM",
-        },
-        "rc_pbfd_20_90": {
-            "path": "RC_PBFD_20/simulated_RC_PBFD_20.parquet",
-            "label": "RC/POWER (20-90)",
-            "group": "RC",
-        },
-    }
+    EXPERIMENTS = PBFD_SIMULATIONS | CPU_SIMULATIONS
     
     #all_footprints = {"Baseline": baseline_footprints}
     all_footprints = {}
@@ -245,6 +198,9 @@ if __name__ == "__main__":
     for view_name, cfg in EXPERIMENTS.items():
         
         print("EXPERIMENT: ", view_name)
+        
+        if cfg["group"] != "MM":
+            continue
         
         exp_merged_data = load_simulation(path=f"{RESULTS_DIR}/{cfg["path"]}", footprints=wattnet)
         exp_footprints = calculate_footprints(exp_merged_data)

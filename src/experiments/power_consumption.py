@@ -103,60 +103,117 @@ def plot_policy_comparison():
 
 
 # Overall comparison
-def plot_energy_comparison(time_df):
+def plot_energy_comparison(df):
 
-    #STYLES = {
-    #    "MM/POWER (10-30)": "--",
-    #    "MM/POWER (10-90)": "-"
-    #}
+    fig, axes = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
 
-    #COLORS = {
-    #    "MM/POWER (10-30)": "blue",
-    #    "MM/POWER (10-90)": "red"
-    #}
-    
-    plt.figure(figsize=(10, 6))
-    
-    #plt.plot(
-    #    power_df["timestamp"],
-    #    power_df["baseline_power"],
-    #    label="Baseline"
-    #)
+    ax_power = axes[0]
+    ax_cpu = axes[1]
 
-    #plt.plot(
-    #    power_df["timestamp"],
-    #    power_df["baseline_2_power"],
-    #    label="Modified Baseline (Empty Hosts = 0W)"
-    #)
+    # -------------------
+    # BASELINES (shared style)
+    # -------------------
+    ax_power.plot(
+        df["timestamp"],
+        df["baseline_power"],
+        label="Baseline Power",
+        linestyle="--",
+        color="black",
+        linewidth=1.5,
+        alpha=0.8
+    )
 
-    for experiment, cfg in EXPERIMENTS.items():
+    ax_power.plot(
+        df["timestamp"],
+        df["baseline_2_power"],
+        label="Baseline 2 Power (empty=0W)",
+        linestyle=":",
+        color="black",
+        linewidth=1.5,
+        alpha=0.8
+    )
 
-        experiment = experiment + "_power"
+    # -------------------
+    # EXPERIMENTS - POWER
+    # -------------------
+    for experiment, cfg in PBFD_SIMULATIONS.items():
+
+        col = experiment + "_power"
+
+        if col not in df.columns:
+            continue
 
         if cfg["group"] != "MM":
             continue
 
-        plt.plot(
-            time_df["timestamp"],
-            time_df[experiment],
+        ax_power.plot(
+            df["timestamp"],
+            df[col],
             label=cfg["label"],
-            #linestyle=STYLES[cfg["label"]],
-            #color=COLORS[cfg["label"]],
             linewidth=1.5
         )
 
-    plt.xlabel("Timestamp")
-    plt.ylabel("Power (W)")
-    #plt.title("MM Policy Comparison")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.savefig(
-        "results/power_comparison.png",
-        dpi=300,
-        bbox_inches="tight"
+    ax_power.set_ylabel("Power (W)")
+    ax_power.set_title("Power BFD Comparison")
+    ax_power.grid(alpha=0.3)
+    ax_power.legend()
+
+    # -------------------
+    # BASELINES (CPU)
+    # -------------------
+    ax_cpu.plot(
+        df["timestamp"],
+        df["baseline_power"],
+        label="Baseline CPU",
+        linestyle="--",
+        color="black",
+        linewidth=1.5,
+        alpha=0.8
     )
+
+    ax_cpu.plot(
+        df["timestamp"],
+        df["baseline_2_power"],
+        label="Baseline 2 CPU",
+        linestyle=":",
+        color="black",
+        linewidth=1.5,
+        alpha=0.8
+    )
+
+    # -------------------
+    # EXPERIMENTS - CPU
+    # -------------------
+    for experiment, cfg in CPU_SIMULATIONS.items():
+
+        col = experiment + "_cpu"
+
+        if col not in df.columns:
+            continue
+
+        if cfg["group"] != "MM":
+            continue
+
+        ax_cpu.plot(
+            df["timestamp"],
+            df[col],
+            label=cfg["label"],
+            linewidth=1.5
+        )
+
+    ax_cpu.set_ylabel("Power (W)")
+    ax_cpu.set_title("CPU BFD Comparison")
+    ax_cpu.grid(alpha=0.3)
+    ax_cpu.legend()
+
+    # -------------------
+    # COMMON X AXIS
+    # -------------------
+    plt.xlabel("Timestamp")
+    plt.xticks(rotation=45)
+
+    plt.tight_layout()
+    plt.savefig("results/power_comparison.png", dpi=300)
     plt.show()
 
 if __name__ == "__main__":
@@ -208,11 +265,18 @@ if __name__ == "__main__":
     
         load_experiment(view_name, cfg)
         
+
+    for view_name, cfg in PBFD_SIMULATIONS.items():
         power_df = power_df.merge(
             get_simulated_power(view_name, view_name+"_power"),
             on="timestamp"
         )
-
+    
+    for view_name, cfg in CPU_SIMULATIONS.items():
+        power_df = power_df.merge(
+            get_simulated_power(view_name, view_name+"_cpu"),
+            on="timestamp"
+        )
 
     # summary
     summary_df = pd.concat(

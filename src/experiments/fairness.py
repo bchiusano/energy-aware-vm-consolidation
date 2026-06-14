@@ -3,6 +3,7 @@ import duckdb as ddb
 import numpy as np
 from pathlib import Path
 import pandas as pd
+from experiment_names import *
 
 
 def load_experiment(name, path):
@@ -142,75 +143,7 @@ if __name__ == "__main__":
     # User data
     con.query(f"""CREATE OR REPLACE TABLE vmhardware AS SELECT * FROM read_csv('{DATA_DIR}/vms/2024-12-14T000000Z_2025-04-13T235959Z/vms_fixed.csv')""")
 
-    '''
-    "rc_pbfd": {
-            "path": "RC_PBFD/placements_RC_PBFD.parquet",
-            "label": "RC + POWER - 10-90",
-            "group": "RC",
-        },
-        "mm_pbfd": {
-            "path": "MM_PBFD/placements_MM_PBFD.parquet",
-            "label": "MM + POWER + 10-90",
-            "group": "MM",
-        },
-         "mm_bfd": {
-            "path": "MM_BFD_CPU/placements_MM_BFD_CPU.parquet",
-            "label": "MM + CPU + 10-90",
-            "group": "MM",
-        },
-        "rc_bfd": {
-            "path": "RC_BFD_CPU/placements_RC_BFD_CPU.parquet",
-            "label": "RC + CPU + 10-90",
-            "group": "RC",
-        },    
-        "mm_pbfd_30_no_cpu": {
-            "path": "MM_PBFD_0_30_NO_CPU/placements_MM_PBFD_0_30_NO_CPU.parquet",
-            "label": "MM + POWER + 0-30",
-            "group": "MM",
-        },
-        "mm_pbfd_10_30_no_cpu": {
-            "path": "MM_PBFD_10_30_NO_CPU/placements_MM_PBFD_10_30_NO_CPU.parquet",
-            "label": "MM + POWER + 10-30 + NO CPU",
-            "group": "MM",
-        },
-        "mm_pbfd_10_30": {
-            "path": "MM_PBFD_10_30/placements_MM_PBFD_10_30.parquet",
-            "label": "MM + POWER + 10-30",
-            "group": "MM",
-        },
-        "rc_pbfd_10_30": {
-            "path": "RC_PBFD_10_30/placements_RC_PBFD_10_30.parquet",
-            "label": "RC + POWER + 10-30",
-            "group": "RC",
-        },
-        "rc_pbfd_20": {
-            "path": "RC_PBFD_20/placements_RC_PBFD_20.parquet",
-            "label": "RC + POWER + 20-90",
-            "group": "RC",
-        },
-        "rc_cpu_bfd_20": {
-            "path": "RC_CPU_BFD_20/placements_RC_CPU_BFD_20.parquet",
-            "label": "RC + CPU + 20-90",
-            "group": "RC",
-        },
-    '''
-    EXPERIMENTS = {
-        "mm_pbfd": {
-            "path": "MM_PBFD/placements_MM_PBFD.parquet",
-            "label": "MM/POWER (10-90)",
-            "group": "MM",
-        },
-        "mm_pbfd_10_30": {
-            "path": "MM_PBFD_10_30/placements_MM_PBFD_10_30.parquet",
-            "label": "MM/POWER (10-30)",
-            "group": "MM",
-        },
-        "rc_pbfd_20": {
-            "path": "RC_PBFD_20/placements_RC_PBFD_20.parquet",
-            "label": "RC/POWER (20-90)",
-            "group": "RC",
-        },
-    }
+    EXPERIMENTS = PBFD_PLACEMENTS | CPU_PLACEMENTS
 
     vm_user = con.query("""SELECT vm_id, user_id from vmhardware""").df()
     results = {}
