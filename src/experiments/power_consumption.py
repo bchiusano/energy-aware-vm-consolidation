@@ -2,6 +2,7 @@ import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
 import duckdb as ddb
+from experiment_names import *
 
 
 def load_experiment(name, path):
@@ -18,7 +19,8 @@ def get_power_summary(experiment):
             '{experiment}' AS experiment,
             SUM(simulated_power) AS total_power_w,
             AVG(simulated_power) AS avg_power_w,
-            SUM(simulated_power) * 0.05 / 1000000 AS total_energy_mwh
+            SUM(simulated_power) * 0.05 / 1000000 AS total_energy_mwh,
+            SUM(simulated_power) * 0.05 / 1000 AS total_energy_kwh
         FROM {experiment}
     """).df()
 
@@ -192,91 +194,7 @@ if __name__ == "__main__":
         ORDER BY timestamp
     """).df()
 
-    '''
-    "rc_pbfd": {
-            "path": "RC_PBFD/simulated_RC_PBFD.parquet",
-            "label": "RC + POWER - 10-90",
-            "group": "RC",
-        },
-        "mm_pbfd": {
-            "path": "MM_PBFD/simulated_MM_PBFD.parquet",
-            "label": "MM + POWER + 10-90",
-            "group": "MM",
-        },
-         "mm_bfd": {
-            "path": "MM_BFD_CPU/simulated_MM_BFD_CPU.parquet",
-            "label": "MM + CPU + 10-90",
-            "group": "MM",
-        },
-        "rc_bfd": {
-            "path": "RC_BFD_CPU/simulated_RC_BFD_CPU.parquet",
-            "label": "RC + CPU + 10-90",
-            "group": "RC",
-        },    
-        "mm_pbfd_30_no_cpu": {
-            "path": "MM_PBFD_0_30_NO_CPU/simulated_MM_PBFD_0_30_NO_CPU.parquet",
-            "label": "MM + POWER + 0-30",
-            "group": "MM",
-        },
-        "mm_pbfd_10_30_no_cpu": {
-            "path": "MM_PBFD_10_30_NO_CPU/simulated_MM_PBFD_10_30_NO_CPU.parquet",
-            "label": "MM + POWER + 10-30 + NO CPU",
-            "group": "MM",
-        },
-        "mm_pbfd_10_30": {
-            "path": "MM_PBFD_10_30/simulated_MM_PBFD_10_30.parquet",
-            "label": "MM + POWER + 10-30",
-            "group": "MM",
-        },
-        "rc_pbfd_10_30": {
-            "path": "RC_PBFD_10_30/simulated_RC_PBFD_10_30.parquet",
-            "label": "RC + POWER + 10-30",
-            "group": "RC",
-        },
-        "rc_pbfd_20": {
-            "path": "RC_PBFD_20/simulated_RC_PBFD_20.parquet",
-            "label": "RC + POWER + 20-90",
-            "group": "RC",
-        },
-        "rc_cpu_bfd_20": {
-            "path": "RC_CPU_BFD_20/simulated_RC_CPU_BFD_20.parquet",
-            "label": "RC + CPU + 20-90",
-            "group": "RC",
-        },
-    '''
-    EXPERIMENTS = {
-        #"mm_pbfd_10_90": {
-        #    "path": "MM_PBFD/simulated_MM_PBFD.parquet",
-        #    "label": "MM/POWER (10-90)",
-        #    "group": "MM",
-        #},
-        "mm_bfd_cpu_10_90": {
-            "path": "MM_BFD_CPU/simulated_MM_BFD_CPU.parquet",
-            "label": "MM/CPU (10-90)",
-            "group": "MM",
-        },
-        #"mm_pbfd_10_30": {
-        #    "path": "MM_PBFD_10_30/simulated_MM_PBFD_10_30.parquet",
-        #    "label": "MM/POWER (10-30)",
-        #    "group": "MM",
-        #},
-        "mm_cpu_bfd_10_30": {
-            "path": "MM_CPU_BFD_10_30/simulated_MM_CPU_BFD_10_30.parquet",
-            "label": "MM/CPU (10-30)",
-            "group": "MM",
-        },
-        "mm_cpu_bfd_20_30": {
-            "path": "MM_CPU_BFD_20_30/simulated_MM_CPU_BFD_20_30.parquet",
-            "label": "MM/CPU (20-30)",
-            "group": "MM",
-        },
-
-        #"mm_pbfd_20_30": {
-        #    "path": "MM_PBFD_20_30/simulated_MM_PBFD_20_30.parquet",
-        #    "label": "MM/POWER (20-30)",
-        #    "group": "MM",
-        #},
-    }
+    EXPERIMENTS = PBFD_SIMULATIONS | CPU_SIMULATIONS
 
     power_df = baseline_power.copy()
     power_df = power_df.merge(
