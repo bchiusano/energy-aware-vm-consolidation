@@ -7,7 +7,7 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
         vms = sorted(vms_to_migrate, key=lambda x: x["vm_power"], reverse=True)
 
     elif policy == "cpu_bfd":
-        vms = sorted(vms_to_migrate, key=lambda x: x["vm_cpu"], reverse=True)
+        vms = sorted(vms_to_migrate, key=lambda x: x["vm_cpu_demand"], reverse=True)
 
     else:
         vms = vms_to_migrate
@@ -17,9 +17,13 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
         vm_memory = vm["vm_memory_mb"]
         vm_cpu = vm["vm_cpu"]
         vm_power = vm["vm_power"]
+
+        vm_cpu_demand = vm["vm_cpu_demand"]
+        vm_memory_demand = vm["vm_memory_demand"]
         
         #print(f"\n{'='*80}")
         #print(f"Placing VM {vm['vm_id']} (CPU: {vm_cpu}, Mem: {vm_memory}MB, Power: {vm_power}W)")
+        #print(f"Placing VM {vm['vm_id']} (CPU DEMAND: {vm_cpu_demand}, Mem DEMAND: {vm_memory_demand}MB, Power: {vm_power}W)")
         #print(f"  Source: {vm['source_node']}")
 
         # Resource tracking
@@ -33,33 +37,39 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
 
         for idx, host in hosts.iterrows():
 
-            cpu_capacity = host["cpu_capacity"]
-            cpu_allocated = host["cpu_allocated"]
-            cpu_available = cpu_capacity - cpu_allocated
         
-            
-            #memory_capacity = host["memory_capacity_mb"]
-            #memory_allocated = host["memory_allocated_mb"]
-            memory_available = host["memory_available_mb"]
+            cpu_capacity = host["cpu_capacity"]
+            #cpu_allocated = host["cpu_allocated"]
+            simulated_cpu_used = host["simulated_cpu_used"]
+            cpu_available = cpu_capacity - simulated_cpu_used
+
+            # TODO: keep like this?
+            #memory_available = host["memory_available_mb"]
+            memory_available = host["memory_capacity_mb"] - host["simulated_memory_used_mb"]
 
             power_capacity = host["power_capacity"]
             power_baseline = host["baseline_power"]
             power_allocated = host['vm_power_allocated']
             power_available = power_capacity - power_baseline - power_allocated
 
-            # Check constraints
-            cpu_ok = vm_cpu <= cpu_available
-            mem_ok = vm_memory <= memory_available
+            # old constraints
+            #cpu_ok = vm_cpu <= cpu_available
+            #mem_ok = vm_memory <= memory_available
+            
+            cpu_ok= vm_cpu_demand <= cpu_available
+            mem_ok = vm_memory_demand <= memory_available
             power_ok = vm_power <= power_available
 
-
+            #print("VM: cpu - ", vm_cpu, " memory -", vm_memory, " power -", vm_power)
+            #print("HOST: cpu - ", cpu_available, " memory -", memory_available, " power -", power_available)
+            
             if cpu_ok and mem_ok and power_ok:
             #if mem_ok and power_ok:
                 
                 if policy == "power_bfd":
                     remaining_score = power_available - vm_power
                 elif policy == "cpu_bfd":
-                    remaining_score = cpu_available - vm_cpu
+                    remaining_score = cpu_available - vm_cpu_demand
 
                 candidates.append((idx, host["node_name"], remaining_score))
 
@@ -92,12 +102,14 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
                 "target_node": target_name,
                 "vm_power": vm_power,
                 "vm_cpu": vm_cpu,
-                "vm_memory_mb": vm_memory
+                "vm_memory_mb": vm_memory,
+                "vm_cpu_demand": vm_cpu_demand,
+                "vm_memory_demand": vm_memory_demand
             })
 
             # Update allocated resources 
-            hosts.at[best_host, "cpu_allocated"] += vm["vm_cpu"]
-            hosts.at[best_host, "memory_allocated_mb"] += vm["vm_memory_mb"]
+            hosts.at[best_host, "simulated_cpu_used"] += vm["vm_cpu_demand"]
+            hosts.at[best_host, "simulated_memory_used_mb"] += vm["vm_memory_demand"]
             hosts.at[best_host, "vm_power_allocated"] += vm["vm_power"]
             hosts.at[best_host, "simulated_power"] = (
                 hosts.loc[best_host, "baseline_power"]
@@ -112,6 +124,8 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
                 "vm_power": vm_power,
                 "vm_cpu": vm_cpu,
                 "vm_memory_mb": vm_memory,
+                "vm_cpu_demand": vm_cpu_demand,
+                "vm_memory_demand": vm_memory_demand,
                 "insufficient_cpu_hosts": len(insufficient_cpu),
                 "insufficient_memory_hosts": len(insufficient_memory),
                 "insufficient_power_hosts": len(insufficient_power)

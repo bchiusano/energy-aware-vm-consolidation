@@ -7,9 +7,13 @@ from pathlib import Path
 
 def host_detection(host_state, upper_threshold=90, lower_threshold=10):
     
+    #print(host_state.columns)
     overloaded = host_state[host_state["cpu_usage_percent"] > upper_threshold]
     underloaded = host_state[host_state["cpu_usage_percent"] < lower_threshold]
-    targets = host_state[(host_state["cpu_usage_percent"] >= lower_threshold) & (host_state["cpu_usage_percent"] <= upper_threshold)]
+    targets = host_state[(host_state["cpu_usage_percent"] >= lower_threshold) 
+                         & (host_state["cpu_usage_percent"] <= upper_threshold)
+                         & (host_state["vm_count"] > 0)]
+    #print(len(targets))
 
     return overloaded, underloaded, targets
 
@@ -38,15 +42,21 @@ def update_host_state_after_migration(hosts, placements):
         source_idx = hosts[hosts["node_name"] == placement["source_node"]].index[0]
         target_idx = hosts[hosts["node_name"] == placement["target_node"]].index[0]
         
-        # Remove VM resources from source host
+        # Remove estimated VM demand from source host
         hosts.at[source_idx, "cpu_allocated"] -= placement["vm_cpu"]
         hosts.at[source_idx, "memory_allocated_mb"] -= placement["vm_memory_mb"]
+        hosts.at[source_idx, "simulated_cpu_used"] -= placement["vm_cpu_demand"]
+        hosts.at[source_idx, "simulated_memory_used_mb"] -= placement["vm_memory_demand"]
         hosts.at[source_idx, "vm_power_allocated"] -= placement["vm_power"]
+        hosts.at[source_idx, "vm_count"] -= 1
 
-        # Add VM resources to target host
+        # Add estimated VM demand to target host
         hosts.at[target_idx, "cpu_allocated"] += placement["vm_cpu"]
         hosts.at[target_idx, "memory_allocated_mb"] += placement["vm_memory_mb"]
+        hosts.at[target_idx, "simulated_cpu_used"] += placement["vm_cpu_demand"]
+        hosts.at[target_idx, "simulated_memory_used_mb"] += placement["vm_memory_demand"]
         hosts.at[target_idx, "vm_power_allocated"] += placement["vm_power"]
+        hosts.at[target_idx, "vm_count"] += 1
 
         # Recompute simulated power for both hosts
         hosts.at[source_idx, "simulated_power"] = (hosts.loc[source_idx, "baseline_power"]
@@ -56,6 +66,8 @@ def update_host_state_after_migration(hosts, placements):
     
     # Detect empty hosts after migration and set simulated power to 0
     hosts.loc[hosts["vm_power_allocated"] <= 0, "simulated_power"] = 0
+    hosts["simulated_cpu_used"] = hosts["simulated_cpu_used"].clip(lower=0)
+    hosts["simulated_memory_used_mb"] = hosts["simulated_memory_used_mb"].clip(lower=0)
     
     return hosts
 
@@ -76,9 +88,9 @@ def save_results(simulated_frames, all_placements, all_failed_placements, OUTPUT
     placements_df.to_parquet(f'{output_dir}/placements_{experiment}.parquet', index=False)
 
     # Saving failed placements
-    #print("Failed placements saved")
-    #failed_placements_df = pd.DataFrame(all_failed_placements)
-    #failed_placements_df.to_parquet(f'{output_dir}/failed_placements_{experiment}.parquet', index=False)
+    print("Failed placements saved")
+    failed_placements_df = pd.DataFrame(all_failed_placements)
+    failed_placements_df.to_parquet(f'{output_dir}/failed_placements_{experiment}.parquet', index=False)
 
 
 def run_consolidation(timestamps, selection_policy, placement_policy, upper_threshold, lower_threshold, name, con):
@@ -91,7 +103,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
     # example checking for the first 3 timestamps
     #n = len(timestamps)
     #start_idx = n // 2 - 1  # 1 before middle
-    #timestamps = timestamps[start_idx:start_idx+1]
+    #timestamps = timestamps[start_idx:start_idx+10]
 
     for t, in tqdm(timestamps, desc="Processing timestamps"):
         
@@ -119,6 +131,14 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         host_df['vm_memories_mb'] = host_df['node_name'].map(lambda x: [v['vm_memory_mb'] for v in vms_by_host.get(x, [])])
         host_df['vm_powers'] = host_df['node_name'].map(lambda x: [v['vm_power'] for v in vms_by_host.get(x, [])])
 
+        # adding simulated_cpu
+        if "simulated_cpu_used" not in host_df.columns:
+            host_df["simulated_cpu_used"] = (host_df["cpu_capacity"] * host_df["cpu_usage_percent"] / 100)
+
+        # adding simulated_memory
+        if "simulated_memory_used_mb" not in host_df.columns:
+            host_df["simulated_memory_used_mb"] = (host_df["memory_capacity_mb"] - host_df["memory_available_mb"])
+
         #print(host_df['vm_hypervisor_groups'])
         # new version of the host_df that I will mutate after placements
         simulated_df_at_t = host_df.copy(deep=True)
@@ -129,6 +149,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         # vm selection
         vms_to_migrate = vm_selection(underloaded=underutilized, overloaded=overutilised, upper_threshold=upper_threshold, policy=selection_policy)
 
+        #print(len(vms_to_migrate))
         # vm placement
         placements, failed_placements = vm_placement(migration_list=vms_to_migrate, hosts=placement_targets, policy=placement_policy)
 
@@ -140,7 +161,7 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
 
         # Save failed placements
         # TODO: removed this temporarily
-        #all_failed_placements.extend(failed_placements)
+        all_failed_placements.extend(failed_placements)
 
         # Save simulated frame
         simulated_frames.append(simulated_df_at_t)
