@@ -22,7 +22,11 @@ def get_power_summary(experiment):
             SUM(simulated_power) * 0.05 / 1000000 AS total_energy_mwh,
             SUM(simulated_power) * 0.05 / 1000 AS total_energy_kwh
         FROM {experiment}
+        
     """).df()
+
+# WHERE timestamp >= '2025-01-01 00:00:00 UTC'
+# AND timestamp < '2025-02-01 00:00:00 UTC'
 
 
 def get_simulated_power(experiment, power_name="total_power"):
@@ -38,9 +42,11 @@ def get_simulated_power(experiment, power_name="total_power"):
 
     return simulated_power
 
+# WHERE timestamp >= '2025-01-01 00:00:00 UTC'
+# AND timestamp < '2025-02-01 00:00:00 UTC'
 
 # plotting
-def plot_policy_comparison():
+def plot_policy_comparison(df):
     
     fig, axes = plt.subplots(
         2, 1,              # 2 rows, 1 column
@@ -48,34 +54,37 @@ def plot_policy_comparison():
         sharex=True
     )
 
-    df = power_df[
-        (power_df["timestamp"] >= "2025-03-01") &
-        (power_df["timestamp"] < "2025-04-01")
-    ]
+    experiments = PBFD_SIMULATIONS | CPU_SIMULATIONS
 
-    for experiment, cfg in EXPERIMENTS.items():
-
-        experiment = experiment + "_power"
+    for experiment, cfg in experiments.items():
 
         if cfg["group"] != "MM":
             continue
 
+        col = f"{experiment}_{cfg['type'].lower()}"
+
+        if col not in df.columns:
+            continue
+
         axes[0].plot(
             df["timestamp"],
-            df[experiment],
+            df[col],
             label=cfg["label"]
         )
 
-    for experiment, cfg in EXPERIMENTS.items():
-
-        experiment = experiment + "_power"
+    for experiment, cfg in experiments.items():
 
         if cfg["group"] != "RC":
             continue
 
+        col = f"{experiment}_{cfg['type'].lower()}"
+
+        if col not in df.columns:
+            continue
+
         axes[1].plot(
             df["timestamp"],
-            df[experiment],
+            df[col],
             label=cfg["label"]
         )
 
@@ -93,11 +102,11 @@ def plot_policy_comparison():
     plt.tight_layout()
 
     # Save figure
-    plt.savefig(
-        "results/rc_vs_mm_policy_comparison.png",
-        dpi=300,
-        bbox_inches="tight"
-    )
+    #plt.savefig(
+    #    "results/rc_vs_mm_policy_comparison.png",
+    #    dpi=300,
+    #    bbox_inches="tight"
+    #)
 
     plt.show()
 
@@ -213,13 +222,13 @@ def plot_energy_comparison(df):
     plt.xticks(rotation=45)
 
     plt.tight_layout()
-    plt.savefig("results/power_comparison.png", dpi=300)
+   # plt.savefig("results/power_comparison.png", dpi=300)
     plt.show()
 
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "results/"
+    RESULTS_DIR = ROOT / "newResults/"
     DATA_DIR = ROOT / "datasets/cloud_energy_consumption/processed"
 
     con = ddb.connect(database=':memory:')
@@ -286,9 +295,8 @@ if __name__ == "__main__":
 
     print(summary_df)
 
-    df = power_df[
-        (power_df["timestamp"] >= "2025-02-01") &
-        (power_df["timestamp"] < "2025-02-7")
-    ]
+    df = power_df#[(power_df["timestamp"] >= "2025-04-01") &
+       # (power_df["timestamp"] < "2025-04-02")]
 
     plot_energy_comparison(df)
+    #plot_policy_comparison(df)

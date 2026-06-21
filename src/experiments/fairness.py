@@ -24,13 +24,44 @@ def gini(x):
     return (len(x) + 1 - 2 * np.sum(cumx) / cumx[-1]) / len(x)
 
 
-def plot_gini_comparison(summary):
-    plt.figure()
-    plt.bar(summary["Experiment"], summary["Gini"])
-    plt.ylabel("Gini Coefficient")
-    plt.title("Fairness Comparison Across Experiments (Gini)")
-    plt.xticks(rotation=45)
-    plt.grid(axis="y")
+def extract_threshold(label):
+    """Extract threshold from label like 'MM (10-30)' -> '10-30'"""
+    return label.split("(")[1].rstrip(")")
+
+
+def plot_gini_comparison_grouped(summary, type="migrations_per_vm"):
+    """Grouped bar chart: Power vs CPU for each threshold."""
+    # Separate by type
+    power_data = summary[summary["Type"] == "POWER"].copy()
+    cpu_data = summary[summary["Type"] == "CPU"].copy()
+    
+    # Extract thresholds and sort
+    power_data["Threshold"] = power_data["Experiment"].apply(extract_threshold)
+    cpu_data["Threshold"] = cpu_data["Experiment"].apply(extract_threshold)
+    
+    thresholds = sorted(power_data["Threshold"].unique())
+    
+    # Get values in threshold order
+    power_gini = [power_data[power_data["Threshold"] == t]["Gini"].values[0] if t in power_data["Threshold"].values else 0 for t in thresholds]
+    cpu_gini = [cpu_data[cpu_data["Threshold"] == t]["Gini"].values[0] if t in cpu_data["Threshold"].values else 0 for t in thresholds]
+    
+    x = np.arange(len(thresholds))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(11, 6))
+    ax.bar(x - width/2, power_gini, width, label="Power BFD", color="steelblue", alpha=0.8)
+    ax.bar(x + width/2, cpu_gini, width, label="CPU BFD", color="coral", alpha=0.8)
+    
+    ax.set_xlabel("Threshold Configuration", fontsize=11)
+    ax.set_ylabel("Gini Coefficient", fontsize=11)
+    ax.set_title("Fairness Comparison: Power vs CPU BFD (Gini)", fontsize=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels(thresholds, rotation=45, ha="right")
+    ax.legend(fontsize=10)
+    ax.grid(axis="y", alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(f"gini_comparison_{type}_NEW.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -41,7 +72,7 @@ def lorenz(ax, data, label):
     ax.plot(pop, cum, label=label)
 
 
-def plot_lorenz_comparison(results, type = "migrations_per_vm"):
+def plot_lorenz_comparison(results, type="migrations_per_vm"):
     for name, res in results.items():
         lorenz(plt, res["data"][type], name)
 
@@ -52,7 +83,7 @@ def plot_lorenz_comparison(results, type = "migrations_per_vm"):
     plt.title(f"Lorenz Curve Comparison for {type}")
     plt.legend()
     plt.grid()
-    plt.savefig(f"lorenz_curves_{type}.png", dpi=300, bbox_inches="tight")
+    plt.savefig(f"lorenz_curves_{type}_NEW.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -63,13 +94,39 @@ def jains_fairness(x):
     return (np.sum(x) ** 2) / (len(x) * np.sum(x ** 2))
 
 
-def plot_jain_comparison(summary):
-    plt.figure()
-    plt.bar(summary["Experiment"], summary["Jain"])
-    plt.ylabel("Jain Fairness Index")
-    plt.title("Fairness Comparison Across Experiments (Jain)")
-    plt.xticks(rotation=45)
-    plt.grid(axis="y")
+def plot_jain_comparison(summary, type="migrations_per_vm"):
+    """Grouped bar chart: Power vs CPU for each threshold."""
+    # Separate by type
+    power_data = summary[summary["Type"] == "POWER"].copy()
+    cpu_data = summary[summary["Type"] == "CPU"].copy()
+    
+    # Extract thresholds and sort
+    power_data["Threshold"] = power_data["Experiment"].apply(extract_threshold)
+    cpu_data["Threshold"] = cpu_data["Experiment"].apply(extract_threshold)
+    
+    thresholds = sorted(power_data["Threshold"].unique())
+    
+    # Get values in threshold order
+    power_jain = [power_data[power_data["Threshold"] == t]["Jain"].values[0] if t in power_data["Threshold"].values else 0 for t in thresholds]
+    cpu_jain = [cpu_data[cpu_data["Threshold"] == t]["Jain"].values[0] if t in cpu_data["Threshold"].values else 0 for t in thresholds]
+    
+    x = np.arange(len(thresholds))
+    width = 0.35
+    
+    fig, ax = plt.subplots(figsize=(11, 6))
+    ax.bar(x - width/2, power_jain, width, label="Power BFD", color="seagreen", alpha=0.8)
+    ax.bar(x + width/2, cpu_jain, width, label="CPU BFD", color="goldenrod", alpha=0.8)
+    
+    ax.set_xlabel("Threshold Configuration", fontsize=11)
+    ax.set_ylabel("Jain Fairness Index", fontsize=11)
+    ax.set_title("Fairness Comparison: Power vs CPU BFD (Jain)", fontsize=12)
+    ax.set_xticks(x)
+    ax.set_xticklabels(thresholds, rotation=45, ha="right")
+    ax.legend(fontsize=10)
+    ax.grid(axis="y", alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(f"jain_comparison_{type}_NEW.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -135,7 +192,7 @@ def show_count(experiment):
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "results/"
+    RESULTS_DIR = ROOT / "newResults/"
     DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
 
     con = ddb.connect(database=':memory:')
@@ -149,34 +206,45 @@ if __name__ == "__main__":
     results = {}
 
     for view_name, val in EXPERIMENTS.items():
+
+        if val["group"] != "MM":
+            continue
         
-        print(val["label"])
+        print(f"{val['label']} ({val['type']})")
         load_experiment(view_name, val)
         show_count(view_name)
-        results[val["label"]] = compute_fairness(view_name, vm_user)
+        results[view_name] = {
+            "label": val["label"],
+            "type": val["type"],
+            "fairness": compute_fairness(view_name, vm_user)
+        }
 
-
+    # Build summaries with Type column
     summary_burden = pd.DataFrame({
-        "Experiment": results.keys(),
-        "Gini": [results[k]["gini_burden"] for k in results],
-        "Jain": [results[k]["jain_burden"] for k in results]
+        "Experiment": [results[k]["label"] for k in results],
+        "Type": [results[k]["type"] for k in results],
+        "Gini": [results[k]["fairness"]["gini_burden"] for k in results],
+        "Jain": [results[k]["fairness"]["jain_burden"] for k in results]
     })
 
     summary_normalised = pd.DataFrame({
-        "Experiment": results.keys(),
-        "Gini": [results[k]["gini_normalised"] for k in results],
-        "Jain": [results[k]["jain_normalised"] for k in results]
+        "Experiment": [results[k]["label"] for k in results],
+        "Type": [results[k]["type"] for k in results],
+        "Gini": [results[k]["fairness"]["gini_normalised"] for k in results],
+        "Jain": [results[k]["fairness"]["jain_normalised"] for k in results]
     })
 
+    print("\n=== Burden (Total Migrations) ===")
     print(summary_burden)
+    
+    print("\n=== Normalised (Per-VM Migrations) ===")
     print(summary_normalised)
 
-    # plots
-    plot_gini_comparison(summary_burden)
-    plot_jain_comparison(summary_burden)
-    plot_lorenz_comparison(results, type="migrations")
+    # Grouped bar plots
+    plot_gini_comparison_grouped(summary_burden, type="migrations_burden")
+    plot_jain_comparison(summary_burden, type="migrations_burden")
+    plot_lorenz_comparison({results[k]["label"]: results[k]["fairness"] for k in results}, type="migrations")
 
-    plot_gini_comparison(summary_normalised)
-    plot_jain_comparison(summary_normalised)
-    plot_lorenz_comparison(results, type="migrations_per_vm")
-    
+    plot_gini_comparison_grouped(summary_normalised, type="migrations_per_vm")
+    plot_jain_comparison(summary_normalised, type="migrations_per_vm")
+    plot_lorenz_comparison({results[k]["label"]: results[k]["fairness"] for k in results}, type="migrations_per_vm")

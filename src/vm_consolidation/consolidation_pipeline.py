@@ -170,5 +170,5 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
     save_results(simulated_frames=simulated_frames, 
                  all_placements=all_placements, 
                  all_failed_placements=all_failed_placements, 
-                 OUTPUT_DIR="results", 
+                 OUTPUT_DIR="newResults", 
                  experiment=name)

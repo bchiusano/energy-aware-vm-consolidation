@@ -114,7 +114,6 @@ def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
     
     for scenario_name, fp_df in all_footprints_dict.items():
         # Extract variant (POWER or CPU) and threshold from scenario name
-        # Assumes format: "MM/POWER (0-30)" or "MM/CPU (10-90)"
         if "POWER" in scenario_name:
             variant = "POWER"
         elif "CPU" in scenario_name:
@@ -207,8 +206,97 @@ def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
     axes[1].set_ylim(water_min - 0.1 * water_range, water_max + 0.1 * water_range)
     
     plt.tight_layout()
+    plt.show()
     
     return fig, parse_df
+
+
+def plot_footprints_by_scope_coverage(all_footprints_dict):
+    """
+    Plot total carbon and water footprints across all scope/coverage combinations.
+
+    Args:
+        all_footprints_dict: Dict with keys = experiment names, values = footprints DataFrames
+    """
+    scope_coverage_order = [
+        ("operational", "local"),
+        ("operational", "global"),
+        ("life-cycle", "local"),
+        ("life-cycle", "global"),
+    ]
+    x_labels = [f"{scope}\n{cover}" for scope, cover in scope_coverage_order]
+    x = np.arange(len(scope_coverage_order))
+
+    plot_rows = []
+    for experiment_name, fp_df in all_footprints_dict.items():
+        for scope, cover in scope_coverage_order:
+            carbon_match = fp_df[
+                (fp_df["footprint_type"] == "carbon") &
+                (fp_df["scope"] == scope) &
+                (fp_df["coverage"] == cover)
+            ]
+            water_match = fp_df[
+                (fp_df["footprint_type"] == "water") &
+                (fp_df["scope"] == scope) &
+                (fp_df["coverage"] == cover)
+            ]
+
+            if carbon_match.empty or water_match.empty:
+                continue
+
+            plot_rows.append({
+                "experiment": experiment_name,
+                "scope": scope,
+                "coverage": cover,
+                "scope_coverage": f"{scope}/{cover}",
+                "carbon_metric_tons": carbon_match["total_metric_tons"].iloc[0],
+                "water_m3": water_match["total_m3"].iloc[0],
+            })
+
+    plot_df = pd.DataFrame(plot_rows)
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 5), sharex=True)
+
+    for experiment_name in all_footprints_dict.keys():
+        experiment_df = plot_df[plot_df["experiment"] == experiment_name]
+        if experiment_df.empty:
+            continue
+
+        axes[0].plot(
+            x,
+            experiment_df["carbon_metric_tons"],
+            marker="o",
+            linewidth=1.8,
+            label=experiment_name,
+        )
+        axes[1].plot(
+            x,
+            experiment_df["water_m3"],
+            marker="o",
+            linewidth=1.8,
+            label=experiment_name,
+        )
+
+    axes[0].set_title("Carbon Footprint by Scope and Coverage", fontsize=12, fontweight="bold")
+    axes[0].set_ylabel("CO₂ (metric tons)", fontsize=11)
+    axes[0].set_xlabel("Scope / Coverage", fontsize=11)
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(x_labels)
+    axes[0].grid(axis="y", alpha=0.3)
+
+    axes[1].set_title("Water Footprint by Scope and Coverage", fontsize=12, fontweight="bold")
+    axes[1].set_ylabel("Water (m³)", fontsize=11)
+    axes[1].set_xlabel("Scope / Coverage", fontsize=11)
+    axes[1].set_xticks(x)
+    axes[1].set_xticklabels(x_labels)
+    axes[1].grid(axis="y", alpha=0.3)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=2, fontsize=9)
+    plt.tight_layout(rect=[0, 0, 1, 0.9])
+    plt.show()
+
+    return fig, plot_df
 
 # Scatter plot
 
@@ -217,7 +305,7 @@ def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "results/"
+    RESULTS_DIR = ROOT / "newResults/"
     DATA_DIR = ROOT / "datasets/entsoe_wattnet"
     BASELINE_DIR = ROOT / "datasets/cloud_energy_consumption/processed/node_snapshot.parquet"
 
@@ -246,18 +334,20 @@ if __name__ == "__main__":
         if cfg["group"] != "MM":
             continue
         
-        exp_merged_data = load_simulation(path=f"{RESULTS_DIR}/{cfg["path"]}", footprints=wattnet)
+        exp_merged_data = load_simulation(path=f"{RESULTS_DIR}/{cfg['path']}", footprints=wattnet)
         exp_footprints = calculate_footprints(exp_merged_data)
         
         all_footprints[cfg["label"]] = exp_footprints
 
     
     # Plot comparison
-    scope = "life-cycle"
-    coverage = "global"
+    scope = "operational"
+    coverage = "local"
 
     fig, plot_df = plot_specific_footprints(all_footprints_dict=all_footprints, scope_param=scope, coverage_param=coverage)
-    plt.savefig("footprint_comparison_global_lc_new.png", dpi=300, bbox_inches="tight")
+    fig, scope_coverage_plot_df = plot_footprints_by_scope_coverage(all_footprints)
+    #plt.savefig("footprint_comparison_global_lc_new.png", dpi=300, bbox_inches="tight")
     print("\nPlot saved")
     print("\nComparison summary:")
-    print(plot_df)
+    #print(plot_df)
+    print(scope_coverage_plot_df)
