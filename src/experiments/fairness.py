@@ -34,10 +34,16 @@ def plot_gini_comparison_grouped(summary, type="migrations_per_vm"):
     # Separate by type
     power_data = summary[summary["Type"] == "POWER"].copy()
     cpu_data = summary[summary["Type"] == "CPU"].copy()
+
+    print("POWER_DATA: ", power_data)
+    print("CPU_DATA: ", cpu_data)
     
     # Extract thresholds and sort
     power_data["Threshold"] = power_data["Experiment"].apply(extract_threshold)
     cpu_data["Threshold"] = cpu_data["Experiment"].apply(extract_threshold)
+
+    print("POWER_DATA: ", power_data)
+    print("CPU_DATA: ", cpu_data)
     
     thresholds = sorted(power_data["Threshold"].unique())
     
@@ -54,14 +60,14 @@ def plot_gini_comparison_grouped(summary, type="migrations_per_vm"):
     
     ax.set_xlabel("Threshold Configuration", fontsize=11)
     ax.set_ylabel("Gini Coefficient", fontsize=11)
-    ax.set_title("Fairness Comparison: Power vs CPU BFD (Gini)", fontsize=12)
+    #ax.set_title("Fairness Comparison: Power vs CPU BFD (Gini)", fontsize=12)
     ax.set_xticks(x)
     ax.set_xticklabels(thresholds, rotation=45, ha="right")
     ax.legend(fontsize=10)
     ax.grid(axis="y", alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig(f"gini_comparison_{type}_NEW.png", dpi=300, bbox_inches="tight")
+    plt.savefig(ROOT/f"src/plots/fairness/gini_comparison_{type}_grid.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -80,10 +86,10 @@ def plot_lorenz_comparison(results, type="migrations_per_vm"):
 
     plt.xlabel("Cumulative share of users")
     plt.ylabel("Cumulative share of migrations")
-    plt.title(f"Lorenz Curve Comparison for {type}")
+    #plt.title(f"Lorenz Curve Comparison for {type}")
     plt.legend()
     plt.grid()
-    plt.savefig(f"lorenz_curves_{type}_NEW.png", dpi=300, bbox_inches="tight")
+    plt.savefig(ROOT/f"src/plots/fairness/lorenz_curves_{type}_grid.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -119,14 +125,14 @@ def plot_jain_comparison(summary, type="migrations_per_vm"):
     
     ax.set_xlabel("Threshold Configuration", fontsize=11)
     ax.set_ylabel("Jain Fairness Index", fontsize=11)
-    ax.set_title("Fairness Comparison: Power vs CPU BFD (Jain)", fontsize=12)
+    #ax.set_title("Fairness Comparison: Power vs CPU BFD (Jain)", fontsize=12)
     ax.set_xticks(x)
     ax.set_xticklabels(thresholds, rotation=45, ha="right")
     ax.legend(fontsize=10)
     ax.grid(axis="y", alpha=0.3)
     
     plt.tight_layout()
-    plt.savefig(f"jain_comparison_{type}_NEW.png", dpi=300, bbox_inches="tight")
+    plt.savefig(ROOT/f"src/plots/fairness/jain_comparison_{type}_grid.png", dpi=300, bbox_inches="tight")
     plt.show()
 
 
@@ -192,7 +198,7 @@ def show_count(experiment):
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "newResults/"
+    RESULTS_DIR = ROOT / "demand_based_results/"
     DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
 
     con = ddb.connect(database=':memory:')
@@ -241,9 +247,9 @@ if __name__ == "__main__":
     print(summary_normalised)
 
     # Grouped bar plots
-    plot_gini_comparison_grouped(summary_burden, type="migrations_burden")
-    plot_jain_comparison(summary_burden, type="migrations_burden")
-    plot_lorenz_comparison({results[k]["label"]: results[k]["fairness"] for k in results}, type="migrations")
+    #plot_gini_comparison_grouped(summary_burden, type="migrations_burden")
+    #plot_jain_comparison(summary_burden, type="migrations_burden")
+    #plot_lorenz_comparison({results[k]["label"]: results[k]["fairness"] for k in results}, type="migrations")
 
     plot_gini_comparison_grouped(summary_normalised, type="migrations_per_vm")
     plot_jain_comparison(summary_normalised, type="migrations_per_vm")

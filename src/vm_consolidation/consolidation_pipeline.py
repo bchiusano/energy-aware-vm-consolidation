@@ -160,7 +160,6 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
         all_placements.extend(placements)
 
         # Save failed placements
-        # TODO: removed this temporarily
         all_failed_placements.extend(failed_placements)
 
         # Save simulated frame
@@ -170,5 +169,5 @@ def run_consolidation(timestamps, selection_policy, placement_policy, upper_thre
     save_results(simulated_frames=simulated_frames, 
                  all_placements=all_placements, 
                  all_failed_placements=all_failed_placements, 
-                 OUTPUT_DIR="newResults", 
+                 OUTPUT_DIR="demand_based_results", 
                  experiment=name)

@@ -1,6 +1,6 @@
 import pandas as pd
 import duckdb as ddb
-from config import DATAPATH
+from forecasting.config import DATAPATH
 
 
 def preprocess_missing_data(data, power_metric="scaphandre_vm_power_total_watts", group_col="vm_id"):
@@ -45,7 +45,6 @@ def construct_vm_list(vm_df):
     return VMs_per_t
 
 
-# TODO: not sure what to include for the node hardware
 def construct_host_list(nodes_df):
     host_per_t = {}
 

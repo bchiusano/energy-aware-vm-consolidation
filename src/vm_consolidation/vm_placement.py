@@ -43,7 +43,6 @@ def bfd_placement(vms_to_migrate, hosts, policy="power_bfd"):
             simulated_cpu_used = host["simulated_cpu_used"]
             cpu_available = cpu_capacity - simulated_cpu_used
 
-            # TODO: keep like this?
             #memory_available = host["memory_available_mb"]
             memory_available = host["memory_capacity_mb"] - host["simulated_memory_used_mb"]
 

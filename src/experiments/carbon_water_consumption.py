@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from experiment_names import *
 import numpy as np
+import duckdb as ddb
 
 # combinations
 scopes = ["operational", "life-cycle"]
@@ -17,13 +18,19 @@ def load_wattnet(dir):
     return wattnet_data
 
 # load baseline and experiment (simulations)
-def load_simulation(path, footprints):
+def load_simulation(path, footprints, baseline=None):
     
-    sim = pd.read_parquet(path)
+    if path:
+        sim = ddb.sql(f"""
+            SELECT timestamp, simulated_power
+            FROM read_parquet('{path}')
+        """).df()
+    else:
+        sim = baseline
 
     sim["timestamp"] = pd.to_datetime(sim["timestamp"], utc=True)
     
-    sim = sim[["timestamp", "simulated_power"]]
+    sim = sim[["timestamp", "simulated_power"]].copy()
     # convert to energy in kwh
     sim["simulated_energy"] =  sim['simulated_power'] * 0.05 / 1000
     
@@ -94,11 +101,11 @@ def calculate_reduction(baseline_footprints, experiment_footprints):
     )
     
     merged["reduction_percent"] = (
-        (merged["total_footprint_baseline"] - merged["total_footprint_experiment"]) 
-        / merged["total_footprint_baseline"] * 100
+        (merged["total_baseline"] - merged["total_experiment"]) 
+        / merged["total_baseline"] * 100
     )
     
-    return merged
+    return merged[["footprint_type", "scope", "coverage", "total_kg_baseline", "total_kg_experiment", "total_m3_baseline", "total_m3_experiment", "reduction_percent"]]
 
 # Bar Plot
 def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
@@ -206,6 +213,7 @@ def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
     axes[1].set_ylim(water_min - 0.1 * water_range, water_max + 0.1 * water_range)
     
     plt.tight_layout()
+    plt.savefig(ROOT/f"src/plots/footprints/capacity_based_footprint_comparison_{scope_param}_{coverage_param}.png", dpi=300, bbox_inches="tight")
     plt.show()
     
     return fig, parse_df
@@ -249,7 +257,7 @@ def plot_footprints_by_scope_coverage(all_footprints_dict):
                 "scope": scope,
                 "coverage": cover,
                 "scope_coverage": f"{scope}/{cover}",
-                "carbon_metric_tons": carbon_match["total_metric_tons"].iloc[0],
+                "carbon_kg": carbon_match["total_kg"].iloc[0],
                 "water_m3": water_match["total_m3"].iloc[0],
             })
 
@@ -264,27 +272,27 @@ def plot_footprints_by_scope_coverage(all_footprints_dict):
 
         axes[0].plot(
             x,
-            experiment_df["carbon_metric_tons"],
+            experiment_df["carbon_kg"],
             marker="o",
-            linewidth=1.8,
+            linewidth=1,
             label=experiment_name,
         )
         axes[1].plot(
             x,
             experiment_df["water_m3"],
             marker="o",
-            linewidth=1.8,
+            linewidth=1,
             label=experiment_name,
         )
 
-    axes[0].set_title("Carbon Footprint by Scope and Coverage", fontsize=12, fontweight="bold")
-    axes[0].set_ylabel("CO₂ (metric tons)", fontsize=11)
+    axes[0].set_title("Carbon Footprint by Scope and Coverage", fontsize=11, fontweight="bold")
+    axes[0].set_ylabel("CO₂ (kg)", fontsize=11)
     axes[0].set_xlabel("Scope / Coverage", fontsize=11)
     axes[0].set_xticks(x)
     axes[0].set_xticklabels(x_labels)
     axes[0].grid(axis="y", alpha=0.3)
 
-    axes[1].set_title("Water Footprint by Scope and Coverage", fontsize=12, fontweight="bold")
+    axes[1].set_title("Water Footprint by Scope and Coverage", fontsize=11, fontweight="bold")
     axes[1].set_ylabel("Water (m³)", fontsize=11)
     axes[1].set_xlabel("Scope / Coverage", fontsize=11)
     axes[1].set_xticks(x)
@@ -292,8 +300,9 @@ def plot_footprints_by_scope_coverage(all_footprints_dict):
     axes[1].grid(axis="y", alpha=0.3)
 
     handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=2, fontsize=9)
+    fig.legend(handles, labels, loc="upper left", ncol=2, fontsize=6)
     plt.tight_layout(rect=[0, 0, 1, 0.9])
+    plt.savefig(ROOT/f"src/plots/footprints/capacity_based_footprint_summary_new.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     return fig, plot_df
@@ -303,30 +312,47 @@ def plot_footprints_by_scope_coverage(all_footprints_dict):
 # carbon footprint reduction vs migration count
 
 if __name__ == "__main__":
-
+    con = ddb.connect(":memory:")
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "newResults/"
-    DATA_DIR = ROOT / "datasets/entsoe_wattnet"
+    RESULTS_DIR = ROOT / "capacity_based_results/"
+    WATTNET_DIR = ROOT / "datasets/entsoe_wattnet"
     BASELINE_DIR = ROOT / "datasets/cloud_energy_consumption/processed/node_snapshot.parquet"
 
-    wattnet = load_wattnet(DATA_DIR)
+    wattnet = load_wattnet(WATTNET_DIR)
 
     # baseline
     baseline_merged_data = load_simulation(path=BASELINE_DIR,footprints=wattnet)
+    con.execute(f"""CREATE OR REPLACE VIEW baseline AS SELECT * FROM read_parquet('{BASELINE_DIR}')""")
+
+    baseline_2 = con.execute("""
+        SELECT
+            timestamp,
+            SUM(
+                CASE
+                    WHEN vm_count > 0 THEN simulated_power
+                    ELSE 0
+                END
+            ) AS simulated_power
+        FROM baseline
+        GROUP BY timestamp
+        ORDER BY timestamp
+    """).df()
+
+    baseline_2_merged = load_simulation(path=None, footprints=wattnet, baseline=baseline_2)
 
     # calculate for baseline
     baseline_footprints = calculate_footprints(baseline_merged_data)
-    print("carbon and water emissions")
     print(baseline_footprints)
-
-    # TODO: also add baseline 2
+    
+    baseline_2_footprints = calculate_footprints(baseline_2_merged)
+    print(baseline_2_footprints)
     
     # load experiment
-    EXPERIMENTS = PBFD_SIMULATIONS | CPU_SIMULATIONS
+    EXPERIMENTS = CAP_PBFD_SIMULATIONS | CAP_CPU_SIMULATIONS
     
-    #all_footprints = {"Baseline": baseline_footprints}
+    #all_footprints = {"Baseline": baseline_footprints, "Baseline2": baseline_2_footprints}
     all_footprints = {}
-
+    
     for view_name, cfg in EXPERIMENTS.items():
         
         print("EXPERIMENT: ", view_name)
@@ -336,18 +362,22 @@ if __name__ == "__main__":
         
         exp_merged_data = load_simulation(path=f"{RESULTS_DIR}/{cfg['path']}", footprints=wattnet)
         exp_footprints = calculate_footprints(exp_merged_data)
+
+        #print("reduction compared to baseline")
+        # print(calculate_reduction(baseline_footprints=baseline_footprints, experiment_footprints=exp_footprints))
+        # print("reduction compared to baseline 2")
+        # print(calculate_reduction(baseline_footprints=baseline_2_footprints, experiment_footprints=exp_footprints).head(10))
         
         all_footprints[cfg["label"]] = exp_footprints
 
-    
-    # Plot comparison
-    scope = "operational"
-    coverage = "local"
+    #plotting
+    scopes = ["operational", "life-cycle"]
+    coverages = ["global", "local"]
 
-    fig, plot_df = plot_specific_footprints(all_footprints_dict=all_footprints, scope_param=scope, coverage_param=coverage)
+    for scope in scopes:
+         for coverage in coverages:
+             fig, plot_df = plot_specific_footprints(all_footprints_dict=all_footprints, scope_param=scope, coverage_param=coverage)
+    
     fig, scope_coverage_plot_df = plot_footprints_by_scope_coverage(all_footprints)
-    #plt.savefig("footprint_comparison_global_lc_new.png", dpi=300, bbox_inches="tight")
-    print("\nPlot saved")
     print("\nComparison summary:")
-    #print(plot_df)
     print(scope_coverage_plot_df)

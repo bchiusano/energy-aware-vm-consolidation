@@ -125,8 +125,8 @@ def plot_energy_comparison(df):
     ax_power.plot(
         df["timestamp"],
         df["baseline_power"],
-        label="Baseline Power",
-        linestyle="--",
+        label="Baseline",
+        linestyle="-",
         color="black",
         linewidth=1.5,
         alpha=0.8
@@ -135,10 +135,10 @@ def plot_energy_comparison(df):
     ax_power.plot(
         df["timestamp"],
         df["baseline_2_power"],
-        label="Baseline 2 Power (empty=0W)",
-        linestyle=":",
+        label="Baseline 2 (empty=0W)",
+        linestyle="--",
         color="black",
-        linewidth=1.5,
+        linewidth=1.7,
         alpha=0.8
     )
 
@@ -159,7 +159,7 @@ def plot_energy_comparison(df):
             df["timestamp"],
             df[col],
             label=cfg["label"],
-            linewidth=1.5
+            linewidth=1.0
         )
 
     ax_power.set_ylabel("Power (W)")
@@ -173,8 +173,8 @@ def plot_energy_comparison(df):
     ax_cpu.plot(
         df["timestamp"],
         df["baseline_power"],
-        label="Baseline CPU",
-        linestyle="--",
+        label="Baseline",
+        linestyle="-",
         color="black",
         linewidth=1.5,
         alpha=0.8
@@ -183,10 +183,10 @@ def plot_energy_comparison(df):
     ax_cpu.plot(
         df["timestamp"],
         df["baseline_2_power"],
-        label="Baseline 2 CPU",
-        linestyle=":",
+        label="Baseline 2 (empty=0W)",
+        linestyle="--",
         color="black",
-        linewidth=1.5,
+        linewidth=1.7,
         alpha=0.8
     )
 
@@ -207,7 +207,7 @@ def plot_energy_comparison(df):
             df["timestamp"],
             df[col],
             label=cfg["label"],
-            linewidth=1.5
+            linewidth=1.0
         )
 
     ax_cpu.set_ylabel("Power (W)")
@@ -222,13 +222,13 @@ def plot_energy_comparison(df):
     plt.xticks(rotation=45)
 
     plt.tight_layout()
-   # plt.savefig("results/power_comparison.png", dpi=300)
+    #plt.savefig(ROOT/"src/plots/power_comparison_grid.png", dpi=300)
     plt.show()
 
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "newResults/"
+    RESULTS_DIR = ROOT / "demand_based_results/"
     DATA_DIR = ROOT / "datasets/cloud_energy_consumption/processed"
 
     con = ddb.connect(database=':memory:')
@@ -295,8 +295,7 @@ if __name__ == "__main__":
 
     print(summary_df)
 
-    df = power_df#[(power_df["timestamp"] >= "2025-04-01") &
-       # (power_df["timestamp"] < "2025-04-02")]
+    df = power_df[(power_df["timestamp"] >= "2025-02-01") & (power_df["timestamp"] < "2025-02-07")]
 
     plot_energy_comparison(df)
     #plot_policy_comparison(df)
