@@ -1,11 +1,168 @@
-# Sustainability and Human Impact of Energy-Aware Decision Making in Cloud Data Centers
+# Environmental Impact and Migration Burden of Energy-Aware Virtual Machine Consolidation in Cloud Data Centers
 
-#### (Original) Description - WIP
-Energy-aware operational strategies, such as workload consolidation, peak avoidance, or shifting flexible jobs, can reduce the energy use and carbon footprint of cloud data centers. However, these actions may also impact users differently, affecting fairness, delays, or resource availability.
-Using node- and VM-level energy data from the IFCA Cloud, this project builds an interpretable energy forecasting or hotspot detection model and uses it to evaluate the sustainability (energy/CO2 reduction) and human impact (workload delays, fairness across user groups) of different operational strategies.
-The project begins with baseline interpretable models and later extend to state-of-the- art temporal architectures (e.g., LSTM/GRU). The goal is to provide transparent, human- centered decision support that balances sustainability with user needs.
+This thesis uses node-level and VM-level operational data from the IFCA Cloud to study whether VM consolidation policies can reduce power, energy, carbon, and water impact while keeping track of operational side effects such as migrations, failed placements, and fairness across users or projects.
 
-#### Expected outcome
-- An interpretable energy modelling framework for sustainability analysis
-- Quantified trade-oFs: energy & CO2 savings vs potential impact on users
-- Visual tools to support ethical and sustainable decisions in cloud operations
+In this repository you can find the code for data preparation/cleaning, consolidation simulation experiments, and analysis. 
+
+
+## Repository Structure
+
+```text
+.
+├── datasets/                     # Raw and processed IFCA Cloud and energy data
+├── demand_based_results/         # Demand-based simulation outputs written by consolidation runs
+├── capacity_based_results/       # Capacity-based simulation outputs and generated figures
+├── RelevantWork/                 # Papers, notes, and literature review material
+├── src/
+│   ├── entsoe_wattnet/           # ENTSO-E and WattTime/Wattnet data utilities
+│   ├── experiments/              # Analysis scripts for power, fairness, migrations, etc.
+│   ├── forecasting/              # Initial forecasting work, not used in the simulations or final thesis version
+│   │   ├── models/               # Forecasting models such as LSTM, Ridge, XGBoost
+│   │   └── train_lstm.py         # LSTM training entry point
+│   ├── notebooks/                # Exploratory data analysis and debugging notebooks
+│   ├── plots/                    # Generated visualizations
+│   ├── sql/                      # DuckDB SQL transformations for VM/node data
+│   ├── vm_consolidation/         # VM consolidation simulator
+│   └── vm_data_preparation.py    # VM data preparation helpers
+├── README.md                     # Original short project description
+├── requirements.txt              # Python dependencies
+└── Thesis_Design.pdf             # Thesis design document
+```
+
+### Data Preparation
+
+Post data cleaning, the consolidation simulator uses DuckDB to build two processed parquet datasets:
+
+- `datasets/cloud_energy_consumption/processed/vm_final.parquet`
+- `datasets/cloud_energy_consumption/processed/node_snapshot.parquet`
+
+The preprocessing logic lives in `src/vm_consolidation/preprocessing.py`. If these processed files do not exist, the script reads the raw VM and node files, runs the SQL files in `src/sql/`, and writes the processed parquet outputs. If they already exist, DuckDB creates views over them.
+
+SQL files:
+
+- `src/sql/01_build_vm_merged.sql`
+- `src/sql/02_build_vm_final.sql`
+- `src/sql/03_build_node_snapshot.sql`
+
+### VM Consolidation Simulator
+
+The simulation code is in `src/vm_consolidation/`.
+
+- `consolidation_pipeline.py` runs the timestamp-by-timestamp consolidation loop.
+- `experiment_grid_pipeline.py` builds and runs a grid of experiments.
+- `vm_selection.py` contains VM selection policies.
+- `vm_placement.py` contains best-fit-decreasing placement logic.
+- `preprocessing.py` initializes the static node snapshot using throughout the simulation.
+
+At each timestamp, the simulator:
+
+1. Loads the current host state from `node_snapshot`.
+2. Loads VMs assigned to each host from `vm_final`.
+3. Detects overloaded and underloaded hosts using CPU thresholds.
+4. Selects VMs to migrate from underloaded and overloaded hosts.
+5. Places VMs on valid target hosts using a best-fit-decreasing policy.
+6. Updates simulated host power, CPU usage, memory usage, and VM counts.
+7. Saves simulated host states, successful placements, and failed placements.
+
+### Policies
+
+Selection policies:
+
+- `MM`: minimization of migrations, implemented by `minimization_of_migrations`.
+- `RC`: random choice, implemented by `random_choice_policy`.
+
+Placement policies:
+
+- `PBFD`: power best-fit decreasing, using remaining power capacity as the score.
+- `CPU_BFD`: CPU best-fit decreasing, using remaining CPU capacity as the score.
+
+Thresholds are expressed as lower and upper CPU utilization percentages. For example, an experiment named `MM_PBFD_0_30` uses minimization of migrations, power-based placement, a lower threshold of `0`, and an upper threshold of `30`.
+
+### Storing Results
+Experiment names also distinguish between the two placement estimation approaches used in the thesis:
+
+- `PBFD` and `CPU_BFD` simulations and placement files refer to the demand-based placement estimation, where placement decisions use observed or estimated VM demand. These outputs are currently stored under `demand_based_results/`.
+- `CAP_PBFD` and `CAP_CPU_BFD` simulations and placement files refer to the capacity-based placement estimation, where placement decisions use VM capacity/resource limits. These outputs are currently stored under `capacity_based_results/`.
+
+
+## Setup
+
+Create and activate a Python environment, then install dependencies:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+The code expects commands to be run from the repository root.
+
+## Running Consolidation Experiments
+
+The grid experiment runner is:
+
+```bash
+PYTHONPATH=src/vm_consolidation python src/vm_consolidation/experiment_grid_pipeline.py
+```
+
+This builds experiments from the configuration in `experiment_grid_pipeline.py` and currently writes outputs to `demand_based_results/<experiment_name>/`.
+
+Each experiment directory contains:
+
+- `simulated_<experiment_name>.parquet`: simulated host state after consolidation.
+- `placements_<experiment_name>.parquet`: successful VM migrations.
+- `failed_placements_<experiment_name>.parquet`: VMs that could not be placed.
+
+
+## Running Analysis Scripts
+
+Power comparison analysis can be run with:
+
+```bash
+PYTHONPATH=src/experiments python src/experiments/power_consumption.py
+```
+
+Carbon and Water comparison analysis can be run with:
+
+```bash
+PYTHONPATH=src/experiments python src/experiments/carbon_water_consumption.py
+```
+
+Fairness analysis can be run with:
+
+```bash
+PYTHONPATH=src/experiments python src/experiments/fairness.py
+```
+
+Most experiment analysis scripts depend on `src/experiments/experiment_names.py`, which maps experiment labels to parquet files in `capacity_based_results/` and in `demand_based_results/`. Depending on which results you want to examine, change the file path in the code.
+
+In summary:
+
+- `power_consumption.py` compares simulated and baseline power/energy.
+- `carbon_water_consumption.py` analyzes environmental impact beyong energy.
+- `fairness.py` analyzes fairness-related metrics.
+- `investigating_unfairness.ipynb` provides a deeper dive into migration burden.
+- `energy_visualisations.py` creates energy-consumption summary plots.
+- `experiment_names.py` stores mappings from experiment names to output parquet files and labels.
+
+Generated figures are stored in `src/plots/`.
+
+
+## Suggested Workflow
+
+1. Install dependencies.
+2. Check that processed parquet files exist in `datasets/cloud_energy_consumption/processed/`.
+3. Run `experiment_grid_pipeline.py` to generate consolidation outputs.
+4. Move or reference the generated outputs in `experiment_names.py`.
+5. Run analysis scripts in `src/experiments/`.
+6. Use generated plots and metrics to compare baseline power, simulated power, migration count, failed placements, carbon impact, water impact, and fairness.
+
+
+## Forecasting Models
+The repository also contains forecasting experiments used to model node power consumption. These models ended up not being used throughout the thesis.
+
+- `src/models/lstm.py`
+- `src/models/ridge_regression.py`
+- `src/models/xgboost_regression.py`
+- `src/train_lstm.py`
+- `src/config.py`
