@@ -107,7 +107,7 @@ Experiment names also distinguish between the two placement estimation approache
 
 ## Setup
 
-Create and activate a Python environment, then install dependencies:
+Create and activate a Python environment, then install dependencies (I was using Python 3.13.3):
 
 ```bash
 python -m venv .venv
