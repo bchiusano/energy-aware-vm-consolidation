@@ -287,7 +287,7 @@ CAP_CPU_SIMULATIONS = {
         },
 
         "mm_cpu_bfd_10_90": {
-            "path": "MM_CPU_BFD_10_90/simulated_CPU_BFD_10_90.parquet",
+            "path": "MM_CPU_BFD_10_90/simulated_MM_CPU_BFD_10_90.parquet",
             "label": "MM/CPU (10-90)",
             "group": "MM",
             "type": "CPU"
@@ -327,7 +327,7 @@ CAP_CPU_PLACEMENTS = {
         },
 
         "mm_cpu_bfd_10_90": {
-            "path": "MM_CPU_BFD_10_90/placements_CPU_BFD_10_90.parquet",
+            "path": "MM_CPU_BFD_10_90/placements_MM_CPU_BFD_10_90.parquet",
             "label": "MM/CPU (10-90)",
             "group": "MM",
             "type": "CPU"

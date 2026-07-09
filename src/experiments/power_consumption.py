@@ -25,9 +25,6 @@ def get_power_summary(experiment):
         
     """).df()
 
-# WHERE timestamp >= '2025-01-01 00:00:00 UTC'
-# AND timestamp < '2025-02-01 00:00:00 UTC'
-
 
 def get_simulated_power(experiment, power_name="total_power"):
 
@@ -42,8 +39,6 @@ def get_simulated_power(experiment, power_name="total_power"):
 
     return simulated_power
 
-# WHERE timestamp >= '2025-01-01 00:00:00 UTC'
-# AND timestamp < '2025-02-01 00:00:00 UTC'
 
 # plotting
 def plot_policy_comparison(df):
@@ -119,9 +114,7 @@ def plot_energy_comparison(df):
     ax_power = axes[0]
     ax_cpu = axes[1]
 
-    # -------------------
-    # BASELINES (shared style)
-    # -------------------
+    # BASELINES 
     ax_power.plot(
         df["timestamp"],
         df["baseline_power"],
@@ -142,9 +135,7 @@ def plot_energy_comparison(df):
         alpha=0.8
     )
 
-    # -------------------
     # EXPERIMENTS - POWER
-    # -------------------
     for experiment, cfg in PBFD_SIMULATIONS.items():
 
         col = experiment + "_power"
@@ -167,9 +158,7 @@ def plot_energy_comparison(df):
     ax_power.grid(alpha=0.3)
     ax_power.legend()
 
-    # -------------------
     # BASELINES (CPU)
-    # -------------------
     ax_cpu.plot(
         df["timestamp"],
         df["baseline_power"],
@@ -190,9 +179,7 @@ def plot_energy_comparison(df):
         alpha=0.8
     )
 
-    # -------------------
     # EXPERIMENTS - CPU
-    # -------------------
     for experiment, cfg in CPU_SIMULATIONS.items():
 
         col = experiment + "_cpu"
@@ -215,9 +202,6 @@ def plot_energy_comparison(df):
     ax_cpu.grid(alpha=0.3)
     ax_cpu.legend()
 
-    # -------------------
-    # COMMON X AXIS
-    # -------------------
     plt.xlabel("Timestamp")
     plt.xticks(rotation=45)
 
@@ -225,11 +209,19 @@ def plot_energy_comparison(df):
     #plt.savefig(ROOT/"src/plots/power_comparison_grid.png", dpi=300)
     plt.show()
 
+
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "demand_based_results/"
     DATA_DIR = ROOT / "datasets/cloud_energy_consumption/processed"
+
+    # LOOKING AT DEMAND-BASED SIMULATIONS (PBFD and CPU)
+    RESULTS_DIR = ROOT / "demand_based_results/"
+    EXPERIMENTS = PBFD_SIMULATIONS | CPU_SIMULATIONS
+
+    # UNCOMMENT TO RUN CAPACITY-BASED SIMULATIONS (PBFD and CPU)
+    # RESULTS_DIR = ROOT / "capacity_based_results/"
+    # EXPERIMENTS = CAP_PBFD_SIMULATIONS | CAP_CPU_SIMULATIONS
 
     con = ddb.connect(database=':memory:')
 
@@ -260,7 +252,6 @@ if __name__ == "__main__":
         ORDER BY timestamp
     """).df()
 
-    EXPERIMENTS = PBFD_SIMULATIONS | CPU_SIMULATIONS
 
     power_df = baseline_power.copy()
     power_df = power_df.merge(
@@ -295,6 +286,7 @@ if __name__ == "__main__":
 
     print(summary_df)
 
+    # Zooming in on one week
     df = power_df[(power_df["timestamp"] >= "2025-02-01") & (power_df["timestamp"] < "2025-02-07")]
 
     plot_energy_comparison(df)

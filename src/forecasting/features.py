@@ -16,7 +16,7 @@ NODE_GROUPS_PATH = (
     DATA_DIR/ 'node-groups/2024-12-14T000000Z_2025-04-13T235959Z/cleaned_node_groups.csv'
 )
 
-OUTPUT_PATH = DATA_DIR / 'features.parquet'
+OUTPUT_PATH = DATA_DIR / 'engineered_features_new.parquet'
 
 # Feature engineering parameters
 LAG_STEPS = [1, 4, 20, 80]
@@ -24,8 +24,8 @@ TARGET = 'ipmi_system_power_watts'
 ROLLING_WINDOWS = [20, 80]  # 3-minute intervals
 
 # Optional features
-INCLUDE_TIME_FEATURES = True
-INCLUDE_LAG_FEATURES = True
+INCLUDE_TIME_FEATURES = False
+INCLUDE_LAG_FEATURES = False
 
 select_cols = "timestamp, node_name, node_group, \
 memory_total_bytes, memory_used_bytes, memory_free_bytes, \

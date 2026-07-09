@@ -198,15 +198,20 @@ def show_count(experiment):
 if __name__ == "__main__":
 
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "demand_based_results/"
     DATA_DIR = ROOT / "datasets/cloud_energy_consumption"
+
+    # LOOKING AT DEMAND-BASED PLACEMENTS (PBFD and CPU) FOR FAIRNESS ANALYSIS
+    RESULTS_DIR = ROOT / "demand_based_results/"
+    EXPERIMENTS = PBFD_PLACEMENTS | CPU_PLACEMENTS
+
+    # UNCOMMENT TO RUN CAPACITY-BASED PLACEMENTS (PBFD and CPU) FOR FAIRNESS ANALYSIS
+    # RESULTS_DIR = ROOT / "capacity_based_results/"
+    # EXPERIMENTS = CAP_PBFD_PLACEMENTS | CAP_CPU_PLACEMENTS
 
     con = ddb.connect(database=':memory:')
 
     # User data
     con.query(f"""CREATE OR REPLACE TABLE vmhardware AS SELECT * FROM read_csv('{DATA_DIR}/vms/2024-12-14T000000Z_2025-04-13T235959Z/vms_fixed.csv')""")
-
-    EXPERIMENTS = PBFD_PLACEMENTS | CPU_PLACEMENTS
 
     vm_user = con.query("""SELECT vm_id, user_id from vmhardware""").df()
     results = {}

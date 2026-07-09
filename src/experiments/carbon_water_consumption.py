@@ -20,6 +20,7 @@ def load_wattnet(dir):
 # load baseline and experiment (simulations)
 def load_simulation(path, footprints, baseline=None):
     
+    print(path)
     if path:
         sim = ddb.sql(f"""
             SELECT timestamp, simulated_power
@@ -213,7 +214,7 @@ def plot_specific_footprints(all_footprints_dict, scope_param, coverage_param):
     axes[1].set_ylim(water_min - 0.1 * water_range, water_max + 0.1 * water_range)
     
     plt.tight_layout()
-    plt.savefig(ROOT/f"src/plots/footprints/capacity_based_footprint_comparison_{scope_param}_{coverage_param}.png", dpi=300, bbox_inches="tight")
+    #plt.savefig(ROOT/f"src/plots/footprints/capacity_based_footprint_comparison_{scope_param}_{coverage_param}.png", dpi=300, bbox_inches="tight")
     plt.show()
     
     return fig, parse_df
@@ -302,21 +303,26 @@ def plot_footprints_by_scope_coverage(all_footprints_dict):
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper left", ncol=2, fontsize=6)
     plt.tight_layout(rect=[0, 0, 1, 0.9])
-    plt.savefig(ROOT/f"src/plots/footprints/capacity_based_footprint_summary_new.png", dpi=300, bbox_inches="tight")
+    #plt.savefig(ROOT/f"src/plots/footprints/capacity_based_footprint_summary_new.png", dpi=300, bbox_inches="tight")
     plt.show()
 
     return fig, plot_df
 
-# Scatter plot
-
-# carbon footprint reduction vs migration count
 
 if __name__ == "__main__":
+    
     con = ddb.connect(":memory:")
     ROOT = Path(__file__).resolve().parents[2]
-    RESULTS_DIR = ROOT / "capacity_based_results/"
     WATTNET_DIR = ROOT / "datasets/entsoe_wattnet"
     BASELINE_DIR = ROOT / "datasets/cloud_energy_consumption/processed/node_snapshot.parquet"
+
+    # LOOKING AT DEMAND-BASED SIMULATIONS (PBFD and CPU)
+    RESULTS_DIR = ROOT / "demand_based_results/"
+    EXPERIMENTS = PBFD_SIMULATIONS | CPU_SIMULATIONS
+
+    # UNCOMMENT TO RUN CAPACITY-BASED SIMULATIONS (PBFD and CPU)
+    # RESULTS_DIR = ROOT / "capacity_based_results/"
+    # EXPERIMENTS = CAP_PBFD_SIMULATIONS | CAP_CPU_SIMULATIONS
 
     wattnet = load_wattnet(WATTNET_DIR)
 
@@ -347,8 +353,6 @@ if __name__ == "__main__":
     baseline_2_footprints = calculate_footprints(baseline_2_merged)
     print(baseline_2_footprints)
     
-    # load experiment
-    EXPERIMENTS = CAP_PBFD_SIMULATIONS | CAP_CPU_SIMULATIONS
     
     #all_footprints = {"Baseline": baseline_footprints, "Baseline2": baseline_2_footprints}
     all_footprints = {}
