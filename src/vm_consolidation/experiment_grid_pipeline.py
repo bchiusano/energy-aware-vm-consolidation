@@ -20,15 +20,15 @@ class ExperimentConfig:
 
 SELECTION_POLICIES = {
     "MM": minimization_of_migrations,
-    #"RC": random_choice_policy,
+    "RC": random_choice_policy,
 }
 
 PLACEMENT_POLICIES = {
-    #"CPU_BFD": "cpu_bfd",
+    "CPU_BFD": "cpu_bfd",
     "PBFD": "power_bfd",
 }
 
-LOWER_THRESHOLDS = range(10, 15, 5)
+LOWER_THRESHOLDS = range(0, 11, 5)
 UPPER_THRESHOLDS = range(25, 31, 5)
 MIN_THRESHOLD_GAP = 15
 EXPERIMENT_SUFFIX = "grid"
